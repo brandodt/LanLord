@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LanLord</RootNamespace>
+    <AssemblyName>LanLord</AssemblyName>
+    <!-- WinPcap native driver is x86-only; must match to avoid runtime load failures -->
+    <PlatformTarget>x86</PlatformTarget>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- This is a Windows-only desktop tool; suppress spurious Windows platform analyzer warnings -->
+    <NoWarn>$(NoWarn);CA1416;CS8981</NoWarn>
+    <!-- BinaryFormatter is present in .NET 8 — suppress the RESX migration advisory -->
+    <GenerateResourceWarnOnBinaryFormatterUse>false</GenerateResourceWarnOnBinaryFormatterUse>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PcapNet.dll was a C++/CLI mixed-mode .NET Framework 2.0 assembly, which .NET 8 cannot load
+         (ERROR_DLL_INIT_FAILED / 0x8007045A). It is replaced by the pure-managed P/Invoke
+         implementation in PcapNet.cs that calls wpcap.dll (Npcap) directly. -->
+    <Reference Include="DataGridViewNumericUpDownElements">
+      <HintPath>..\LIB\DataGridViewNumericUpDownElements.dll</HintPath>
+    </Reference>
+    <Reference Include="ExpandableGridView">
+      <HintPath>..\LIB\ExpandableGridView.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\dwaynelifter_icon.ico" />
+    <Content Include="..\standards-oui.ieee.org.txt">
+      <Link>standards-oui.ieee.org.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="this.Ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Font: RegisterFont() copies this from the app's CWD to C:\Windows\Fonts on first launch -->
+    <Content Include="Resources\Computerfont.ttf" Link="Computerfont.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- npf.sys: WinPcap kernel driver — Driver.create() installs it from the app directory -->
+    <Content Include="Resources\npf.sys" Link="npf.sys">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Packet.dll, npptools.dll, WanPacket.dll are NOT copied — Npcap (WinPcap-compatible mode)
+         installs its own versions to C:\Windows\SysWOW64 (x86) / System32 (x64). Copying the
+         old WinPcap 4.x DLLs from LIB would shadow Npcap's and cause ERROR_DLL_INIT_FAILED. -->
+  </ItemGroup>
+
+</Project>
