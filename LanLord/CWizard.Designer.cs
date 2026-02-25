@@ -40,6 +40,8 @@
             // label1
             // 
             this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.label1.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             this.label1.Location = new System.Drawing.Point(292, 12);
             this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
@@ -49,6 +51,10 @@
             // 
             // richTextBox1
             // 
+            this.richTextBox1.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
+            this.richTextBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.richTextBox1.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.richTextBox1.ForeColor = System.Drawing.Color.FromArgb(170, 185, 210);
             this.richTextBox1.Location = new System.Drawing.Point(10, 37);
             this.richTextBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.richTextBox1.Name = "richTextBox1";
@@ -61,6 +67,8 @@
             // 
             this.radioButton2.AutoSize = true;
             this.radioButton2.Checked = true;
+            this.radioButton2.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.radioButton2.ForeColor = System.Drawing.Color.FromArgb(210, 220, 240);
             this.radioButton2.Location = new System.Drawing.Point(10, 514);
             this.radioButton2.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.radioButton2.Name = "radioButton2";
@@ -73,6 +81,8 @@
             // radioButton1
             // 
             this.radioButton1.AutoSize = true;
+            this.radioButton1.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.radioButton1.ForeColor = System.Drawing.Color.FromArgb(210, 220, 240);
             this.radioButton1.Location = new System.Drawing.Point(10, 478);
             this.radioButton1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.radioButton1.Name = "radioButton1";
@@ -85,19 +95,29 @@
             // 
             // button1
             // 
+            this.button1.BackColor = System.Drawing.Color.FromArgb(29, 78, 216);
+            this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.button1.FlatAppearance.BorderSize = 0;
+            this.button1.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(37, 99, 235);
+            this.button1.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(22, 63, 181);
+            this.button1.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+            this.button1.ForeColor = System.Drawing.Color.White;
             this.button1.Location = new System.Drawing.Point(566, 537);
             this.button1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(104, 45);
             this.button1.TabIndex = 8;
             this.button1.Text = "Quit";
-            this.button1.UseVisualStyleBackColor = true;
+            this.button1.UseVisualStyleBackColor = false;
             this.button1.Click += new System.EventHandler(this.Button1_Click);
             // 
             // CWizard
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(13, 17, 23);
+            this.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
             this.ClientSize = new System.Drawing.Size(678, 595);
             this.ControlBox = false;
             this.Controls.Add(this.radioButton2);

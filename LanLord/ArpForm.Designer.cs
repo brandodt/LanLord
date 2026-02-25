@@ -34,12 +34,13 @@ namespace LanLord
             AdvancedDataGridView.TreeGridNode treeGridNode2 = new AdvancedDataGridView.TreeGridNode();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ArpForm));
             this.panelActionBar = new System.Windows.Forms.Panel();
-            this.btnScanNetwork = new System.Windows.Forms.Button();
-            this.btnStartSpoof = new System.Windows.Forms.Button();
-            this.btnStopSpoof = new System.Windows.Forms.Button();
-            this.btnBlockAll = new System.Windows.Forms.Button();
-            this.btnUnblockAll = new System.Windows.Forms.Button();
-            this.btnExportCsv = new System.Windows.Forms.Button();
+            this.btnScanNetwork = new RoundedButton();
+            this.btnStartSpoof  = new RoundedButton();
+            this.btnStopSpoof   = new RoundedButton();
+            this.btnBlockAll    = new RoundedButton();
+            this.btnUnblockAll  = new RoundedButton();
+            this.btnExportCsv   = new RoundedButton();
+            this.panelSeparator = new System.Windows.Forms.Panel();
             this.treeGridView1 = new AdvancedDataGridView.TreeGridView();
             this.ColPCName = new AdvancedDataGridView.TreeGridColumn();
             this.ColPCIP = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -86,7 +87,7 @@ namespace LanLord
             this.panelActionBar.Controls.Add(this.btnUnblockAll);
             this.panelActionBar.Controls.Add(this.btnExportCsv);
             this.panelActionBar.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelActionBar.BackColor = System.Drawing.Color.FromArgb(13, 17, 23);
+            this.panelActionBar.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
             this.panelActionBar.Height = 68;
             this.panelActionBar.Name = "panelActionBar";
             this.panelActionBar.TabIndex = 0;
@@ -99,6 +100,7 @@ namespace LanLord
             this.btnScanNetwork.FlatAppearance.BorderSize = 0;
             this.btnScanNetwork.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(37, 99, 235);
             this.btnScanNetwork.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(22, 63, 181);
+            this.btnScanNetwork.CornerRadius = 8;
             this.btnScanNetwork.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnScanNetwork.Location = new System.Drawing.Point(14, 12);
             this.btnScanNetwork.Size = new System.Drawing.Size(175, 44);
@@ -116,6 +118,7 @@ namespace LanLord
             this.btnStartSpoof.FlatAppearance.BorderSize = 0;
             this.btnStartSpoof.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(22, 163, 74);
             this.btnStartSpoof.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(16, 100, 47);
+            this.btnStartSpoof.CornerRadius = 8;
             this.btnStartSpoof.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnStartSpoof.Location = new System.Drawing.Point(201, 12);
             this.btnStartSpoof.Size = new System.Drawing.Size(175, 44);
@@ -133,6 +136,7 @@ namespace LanLord
             this.btnStopSpoof.FlatAppearance.BorderSize = 0;
             this.btnStopSpoof.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(185, 28, 28);
             this.btnStopSpoof.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(127, 22, 22);
+            this.btnStopSpoof.CornerRadius = 8;
             this.btnStopSpoof.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnStopSpoof.Location = new System.Drawing.Point(388, 12);
             this.btnStopSpoof.Size = new System.Drawing.Size(175, 44);
@@ -150,6 +154,7 @@ namespace LanLord
             this.btnBlockAll.FlatAppearance.BorderSize = 0;
             this.btnBlockAll.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(160, 40, 40);
             this.btnBlockAll.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(90, 20, 20);
+            this.btnBlockAll.CornerRadius = 8;
             this.btnBlockAll.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnBlockAll.Location = new System.Drawing.Point(575, 12);
             this.btnBlockAll.Size = new System.Drawing.Size(130, 44);
@@ -167,6 +172,7 @@ namespace LanLord
             this.btnUnblockAll.FlatAppearance.BorderSize = 0;
             this.btnUnblockAll.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(40, 110, 40);
             this.btnUnblockAll.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(20, 60, 20);
+            this.btnUnblockAll.CornerRadius = 8;
             this.btnUnblockAll.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnUnblockAll.Location = new System.Drawing.Point(717, 12);
             this.btnUnblockAll.Size = new System.Drawing.Size(130, 44);
@@ -184,6 +190,7 @@ namespace LanLord
             this.btnExportCsv.FlatAppearance.BorderSize = 0;
             this.btnExportCsv.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(70, 70, 85);
             this.btnExportCsv.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(35, 35, 45);
+            this.btnExportCsv.CornerRadius = 8;
             this.btnExportCsv.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnExportCsv.Location = new System.Drawing.Point(859, 12);
             this.btnExportCsv.Size = new System.Drawing.Size(130, 44);
@@ -228,18 +235,18 @@ namespace LanLord
             this.treeGridView1.ShowEditingIcon = false;
             this.treeGridView1.ShowRowErrors = false;
             this.treeGridView1.TabIndex = 1;
-            this.treeGridView1.BackgroundColor = System.Drawing.Color.FromArgb(30, 30, 30);
-            this.treeGridView1.GridColor = System.Drawing.Color.FromArgb(65, 65, 65);
+            this.treeGridView1.BackgroundColor = System.Drawing.Color.FromArgb(13, 17, 23);
+            this.treeGridView1.GridColor = System.Drawing.Color.FromArgb(38, 44, 54);
             this.treeGridView1.EnableHeadersVisualStyles = false;
-            this.treeGridView1.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(45, 45, 48);
-            this.treeGridView1.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
+            this.treeGridView1.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(18, 22, 30);
+            this.treeGridView1.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(180, 195, 215);
             this.treeGridView1.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.treeGridView1.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(37, 37, 38);
-            this.treeGridView1.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
-            this.treeGridView1.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(0, 122, 204);
+            this.treeGridView1.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
+            this.treeGridView1.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(210, 220, 235);
+            this.treeGridView1.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(29, 78, 216);
             this.treeGridView1.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
-            this.treeGridView1.AlternatingRowsDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(50, 50, 52);
-            this.treeGridView1.AlternatingRowsDefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
+            this.treeGridView1.AlternatingRowsDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(28, 35, 46);
+            this.treeGridView1.AlternatingRowsDefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(210, 220, 235);
             this.treeGridView1.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.treeGridView1.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.TreeGridView1_CellValueChanged);
             this.treeGridView1.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.TreeGridView1_CellClick);
@@ -306,9 +313,9 @@ namespace LanLord
             this.ColDownCap.MinimumWidth = 35;
             this.ColDownCap.Name = "ColDownCap";
             this.ColDownCap.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.ColDownCap.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(37, 37, 38);
-            this.ColDownCap.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
-            this.ColDownCap.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(0, 122, 204);
+            this.ColDownCap.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
+            this.ColDownCap.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(210, 220, 235);
+            this.ColDownCap.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(29, 78, 216);
             this.ColDownCap.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
             // 
             // ColUploadCap
@@ -323,9 +330,9 @@ namespace LanLord
             this.ColUploadCap.MinimumWidth = 35;
             this.ColUploadCap.Name = "ColUploadCap";
             this.ColUploadCap.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.ColUploadCap.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(37, 37, 38);
-            this.ColUploadCap.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
-            this.ColUploadCap.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(0, 122, 204);
+            this.ColUploadCap.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
+            this.ColUploadCap.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(210, 220, 235);
+            this.ColUploadCap.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(29, 78, 216);
             this.ColUploadCap.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
             // 
             // ColBlock
@@ -495,7 +502,7 @@ namespace LanLord
             // 
             // statusStrip1
             // 
-            this.statusStrip1.BackColor = System.Drawing.Color.FromArgb(0, 122, 204);
+            this.statusStrip1.BackColor = System.Drawing.Color.FromArgb(22, 27, 34);
             this.statusStrip1.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.lblStatus });
             this.statusStrip1.Name = "statusStrip1";
@@ -505,7 +512,15 @@ namespace LanLord
             // 
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Text = "  Ready — select a network adapter to begin";
-            this.lblStatus.ForeColor = System.Drawing.Color.White;
+            this.lblStatus.ForeColor = System.Drawing.Color.FromArgb(100, 140, 220);
+            // 
+            // panelSeparator  — 2 px accent line between toolbar and grid
+            // 
+            this.panelSeparator.BackColor = System.Drawing.Color.FromArgb(29, 78, 216);
+            this.panelSeparator.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelSeparator.Height = 2;
+            this.panelSeparator.Name = "panelSeparator";
+            this.panelSeparator.TabIndex = 10;
             // 
             // ArpForm
             // 
@@ -513,10 +528,11 @@ namespace LanLord
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1028, 600);
             this.Controls.Add(this.treeGridView1);
+            this.Controls.Add(this.panelSeparator);
             this.Controls.Add(this.panelActionBar);
             this.Controls.Add(this.statusStrip1);
             this.DoubleBuffered = true;
-            this.BackColor = System.Drawing.Color.FromArgb(30, 30, 30);
+            this.BackColor = System.Drawing.Color.FromArgb(13, 17, 23);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -543,12 +559,13 @@ namespace LanLord
         #endregion
 
         private System.Windows.Forms.Panel panelActionBar;
-        private System.Windows.Forms.Button btnScanNetwork;
-        private System.Windows.Forms.Button btnStartSpoof;
-        private System.Windows.Forms.Button btnStopSpoof;
-        private System.Windows.Forms.Button btnBlockAll;
-        private System.Windows.Forms.Button btnUnblockAll;
-        private System.Windows.Forms.Button btnExportCsv;
+        private RoundedButton btnScanNetwork;
+        private RoundedButton btnStartSpoof;
+        private RoundedButton btnStopSpoof;
+        private RoundedButton btnBlockAll;
+        private RoundedButton btnUnblockAll;
+        private RoundedButton btnExportCsv;
+        private System.Windows.Forms.Panel panelSeparator;
         private AdvancedDataGridView.TreeGridView treeGridView1;
         private System.Windows.Forms.ContextMenuStrip ContextMenuViews;
         private System.Windows.Forms.Timer timer1;

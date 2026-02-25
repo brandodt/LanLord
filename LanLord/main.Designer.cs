@@ -79,8 +79,8 @@
             btnRegistrarProveedor.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             btnRegistrarProveedor.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             btnRegistrarProveedor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            btnRegistrarProveedor.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            btnRegistrarProveedor.ForeColor = System.Drawing.Color.Gainsboro;
+            btnRegistrarProveedor.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold);
+            btnRegistrarProveedor.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             btnRegistrarProveedor.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             btnRegistrarProveedor.Location = new System.Drawing.Point(0, 65);
             btnRegistrarProveedor.Name = "btnRegistrarProveedor";
@@ -100,8 +100,8 @@
             btnPanelProv_Ver.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             btnPanelProv_Ver.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             btnPanelProv_Ver.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            btnPanelProv_Ver.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            btnPanelProv_Ver.ForeColor = System.Drawing.Color.Gainsboro;
+            btnPanelProv_Ver.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold);
+            btnPanelProv_Ver.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             btnPanelProv_Ver.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             btnPanelProv_Ver.Location = new System.Drawing.Point(0, 0);
             btnPanelProv_Ver.Name = "btnPanelProv_Ver";
@@ -121,15 +121,15 @@
             btnAbout.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             btnAbout.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             btnAbout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            btnAbout.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            btnAbout.ForeColor = System.Drawing.Color.Gainsboro;
+            btnAbout.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold);
+            btnAbout.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             btnAbout.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             btnAbout.Location = new System.Drawing.Point(0, 0);
             btnAbout.Name = "btnAbout";
             btnAbout.Padding = new System.Windows.Forms.Padding(30, 0, 0, 0);
             btnAbout.Size = new System.Drawing.Size(282, 65);
             btnAbout.TabIndex = 3;
-            btnAbout.Text = "About LanLord";
+            btnAbout.Text = "\u25C8  About LanLord";
             btnAbout.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             btnAbout.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             btnAbout.UseVisualStyleBackColor = true;
@@ -137,7 +137,7 @@
             // 
             // panelBarraTitulo
             // 
-            this.panelBarraTitulo.BackColor = System.Drawing.Color.Black;
+            this.panelBarraTitulo.BackColor = System.Drawing.Color.FromArgb(13, 17, 23);
             this.panelBarraTitulo.Controls.Add(this.label2);
             this.panelBarraTitulo.Controls.Add(this.pictureICONO);
             this.panelBarraTitulo.Controls.Add(this.btnRestaurar);
@@ -263,7 +263,7 @@
             // 
             // panelBottomStrip
             // 
-            this.panelBottomStrip.BackColor = System.Drawing.Color.Black;
+            this.panelBottomStrip.BackColor = System.Drawing.Color.FromArgb(13, 17, 23);
             this.panelBottomStrip.Controls.Add(this.label1);
             this.panelBottomStrip.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panelBottomStrip.Location = new System.Drawing.Point(0, 871);
@@ -329,8 +329,8 @@
             this.panelMenu.Controls.Add(this.btnCoolThings);
             this.panelMenu.Controls.Add(this.btnARP);
             this.panelMenu.Controls.Add(this.panelInfo);
-            this.panelMenu.Dock = System.Windows.Forms.DockStyle.Right;
-            this.panelMenu.Location = new System.Drawing.Point(1026, 49);
+            this.panelMenu.Dock = System.Windows.Forms.DockStyle.Left;
+            this.panelMenu.Location = new System.Drawing.Point(0, 49);
             this.panelMenu.Name = "panelMenu";
             this.panelMenu.Size = new System.Drawing.Size(282, 920);
             this.panelMenu.TabIndex = 1;
@@ -353,15 +353,15 @@
             this.btnInfo.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             this.btnInfo.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             this.btnInfo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnInfo.Font = new System.Drawing.Font("Tahoma", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnInfo.ForeColor = System.Drawing.Color.Gainsboro;
+            this.btnInfo.Font = new System.Drawing.Font("Segoe UI", 10.5F, System.Drawing.FontStyle.Bold);
+            this.btnInfo.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             this.btnInfo.Image = ((System.Drawing.Image)(resources.GetObject("btnInfo.Image")));
             this.btnInfo.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnInfo.Location = new System.Drawing.Point(0, 404);
             this.btnInfo.Name = "btnInfo";
             this.btnInfo.Size = new System.Drawing.Size(282, 62);
             this.btnInfo.TabIndex = 14;
-            this.btnInfo.Text = "Info.";
+            this.btnInfo.Text = "\u2139  Info.";
             this.btnInfo.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             this.btnInfo.UseVisualStyleBackColor = true;
             this.btnInfo.Click += new System.EventHandler(this.btnInfo_Click);
@@ -373,15 +373,15 @@
             this.btnCoolThings.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             this.btnCoolThings.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             this.btnCoolThings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnCoolThings.Font = new System.Drawing.Font("Tahoma", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCoolThings.ForeColor = System.Drawing.Color.Gainsboro;
+            this.btnCoolThings.Font = new System.Drawing.Font("Segoe UI", 10.5F, System.Drawing.FontStyle.Bold);
+            this.btnCoolThings.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             this.btnCoolThings.Image = ((System.Drawing.Image)(resources.GetObject("btnCoolThings.Image")));
             this.btnCoolThings.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCoolThings.Location = new System.Drawing.Point(0, 213);
             this.btnCoolThings.Name = "btnCoolThings";
             this.btnCoolThings.Size = new System.Drawing.Size(282, 62);
             this.btnCoolThings.TabIndex = 12;
-            this.btnCoolThings.Text = "Cool Things";
+            this.btnCoolThings.Text = "\u2699  Cool Things";
             this.btnCoolThings.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             this.btnCoolThings.UseVisualStyleBackColor = true;
             this.btnCoolThings.Visible = false;
@@ -394,15 +394,15 @@
             this.btnARP.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(17)))), ((int)(((byte)(23)))));
             this.btnARP.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(29)))), ((int)(((byte)(78)))), ((int)(((byte)(216)))));
             this.btnARP.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnARP.Font = new System.Drawing.Font("Tahoma", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnARP.ForeColor = System.Drawing.Color.Gainsboro;
+            this.btnARP.Font = new System.Drawing.Font("Segoe UI", 10.5F, System.Drawing.FontStyle.Bold);
+            this.btnARP.ForeColor = System.Drawing.Color.FromArgb(200, 210, 230);
             this.btnARP.Image = ((System.Drawing.Image)(resources.GetObject("btnARP.Image")));
             this.btnARP.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnARP.Location = new System.Drawing.Point(0, 151);
             this.btnARP.Name = "btnARP";
             this.btnARP.Size = new System.Drawing.Size(282, 62);
             this.btnARP.TabIndex = 10;
-            this.btnARP.Text = "ARP Attack";
+            this.btnARP.Text = "\u26A1  ARP Attack";
             this.btnARP.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             this.btnARP.UseVisualStyleBackColor = true;
             this.btnARP.Click += new System.EventHandler(this.btnARP_Click);

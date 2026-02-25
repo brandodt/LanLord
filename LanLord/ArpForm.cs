@@ -42,6 +42,12 @@ namespace LanLord
             initRowContextMenu();
             this.treeGridView1.CellDoubleClick += new DataGridViewCellEventHandler(TreeGridView1_CellDoubleClick);
             this.treeGridView1.CellPainting += new DataGridViewCellPaintingEventHandler(TreeGridView1_CellPainting);
+            // Apply dark theme to all context menus
+            var darkRenderer = new DarkMenuRenderer();
+            this.ContextMenuViews.Renderer = darkRenderer;
+            this.ContextMenuViews.BackColor = UITheme.Surface1;
+            this.LanLordTray.Renderer      = darkRenderer;
+            this.LanLordTray.BackColor      = UITheme.Surface1;
         }
         public void licenseAccepted()
         {
@@ -341,7 +347,8 @@ namespace LanLord
                 return;
             this.cArp.startRedirector();
             this.lblStatus.Text = "  Spoofing active — intercepting network traffic";
-            this.statusStrip1.BackColor = Color.FromArgb(180, 30, 30);
+            this.lblStatus.ForeColor = Color.White;
+            this.statusStrip1.BackColor = UITheme.Danger;
             isSpoofingActive = true;
             this.btnStartSpoof.Enabled = false;
             this.btnStopSpoof.Enabled = true;
@@ -360,7 +367,8 @@ namespace LanLord
             this.cArp.stopRedirector();
             this.cArp.completeUnspoof();
             this.lblStatus.Text = "  Spoofing stopped";
-            this.statusStrip1.BackColor = Color.FromArgb(0, 122, 204);
+            this.lblStatus.ForeColor = Color.FromArgb(100, 140, 220);
+            this.statusStrip1.BackColor = UITheme.Surface1;
             this.timer1.Stop();
             this.timerSpoof.Stop();
             int index = 0;
@@ -551,10 +559,11 @@ namespace LanLord
                     bool isBlocked = Convert.ToBoolean(node.Cells[7].Value);
                     bool isSpoofed = Convert.ToBoolean(node.Cells[8].Value);
                     Color rowBg = isBlocked
-                        ? Color.FromArgb(65, 22, 22)
-                        : (isSpoofed ? Color.FromArgb(20, 40, 72) : Color.FromArgb(37, 37, 38));
+                        ? Color.FromArgb(60, 20, 20)          // red  tint — blocked
+                        : (isSpoofed ? Color.FromArgb(18, 38, 70) // blue tint — spoofed
+                        : UITheme.Surface2);
                     node.DefaultCellStyle.BackColor = rowBg;
-                    node.DefaultCellStyle.ForeColor = Color.FromArgb(220, 220, 220);
+                    node.DefaultCellStyle.ForeColor = UITheme.TextPrimary;
                 }
                 catch (Exception ex)
                 {
@@ -676,8 +685,8 @@ namespace LanLord
             NumericUpDown num = e.Control as NumericUpDown;
             if (num != null)
             {
-                num.BackColor = System.Drawing.Color.FromArgb(37, 37, 38);
-                num.ForeColor = System.Drawing.Color.FromArgb(220, 220, 220);
+                num.BackColor = UITheme.Surface2;
+                num.ForeColor = UITheme.TextPrimary;
             }
         }
 
@@ -685,8 +694,8 @@ namespace LanLord
         {
             // Fix NumericUpDown columns (5=DownCap, 6=UpCap) rendering with black text in dark theme
             if (e.RowIndex < 0 || (e.ColumnIndex != 5 && e.ColumnIndex != 6)) return;
-            Color bg = isSpoofingActive ? Color.FromArgb(37, 37, 38) : Color.FromArgb(28, 28, 28);
-            Color fg = isSpoofingActive ? Color.FromArgb(220, 220, 220) : Color.FromArgb(100, 100, 100);
+            Color bg = isSpoofingActive ? UITheme.Surface2  : UITheme.Surface0;
+            Color fg = isSpoofingActive ? UITheme.TextPrimary : UITheme.TextMuted;
             // Check row-level override (blocked/spoofed tint)
             var rowStyle = this.treeGridView1.Rows[e.RowIndex].DefaultCellStyle;
             if (rowStyle.BackColor != Color.Empty) bg = rowStyle.BackColor;
@@ -708,17 +717,17 @@ namespace LanLord
 
             var disabledStyle = new DataGridViewCellStyle
             {
-                BackColor = System.Drawing.Color.FromArgb(28, 28, 28),
-                ForeColor = System.Drawing.Color.FromArgb(100, 100, 100),
-                SelectionBackColor = System.Drawing.Color.FromArgb(28, 28, 28),
-                SelectionForeColor = System.Drawing.Color.FromArgb(100, 100, 100)
+                BackColor          = UITheme.Surface0,
+                ForeColor          = UITheme.TextMuted,
+                SelectionBackColor = UITheme.Surface0,
+                SelectionForeColor = UITheme.TextMuted
             };
             var enabledStyle = new DataGridViewCellStyle
             {
-                BackColor = System.Drawing.Color.FromArgb(37, 37, 38),
-                ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                SelectionBackColor = System.Drawing.Color.FromArgb(0, 122, 204),
-                SelectionForeColor = System.Drawing.Color.White
+                BackColor          = UITheme.Surface2,
+                ForeColor          = UITheme.TextPrimary,
+                SelectionBackColor = UITheme.GridSelection,
+                SelectionForeColor = Color.White
             };
 
             this.ColBlock.DefaultCellStyle = enabled ? enabledStyle : disabledStyle;
@@ -843,6 +852,10 @@ namespace LanLord
         private void initRowContextMenu()
         {
             rowContextMenu = new ContextMenuStrip();
+            rowContextMenu.BackColor = UITheme.Surface1;
+            rowContextMenu.ForeColor = UITheme.TextPrimary;
+            rowContextMenu.Font      = new System.Drawing.Font("Segoe UI", 9.5F);
+            rowContextMenu.Renderer  = new DarkMenuRenderer();
 
             var cutOffItem = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
             var unblockItem = new ToolStripMenuItem("\u21A9  Remove Caps");

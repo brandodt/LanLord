@@ -221,6 +221,7 @@ namespace LanLord
         #region ARPATTACK
         private void btnARP_Click(object sender, EventArgs e)
         {
+            btnARP.BackColor = Color.FromArgb(29, 78, 216);
             AbrirFormulario(() => new ArpForm());
         }
 
@@ -230,7 +231,7 @@ namespace LanLord
 
         private void btnCoolThings_Click(object sender, EventArgs e)
         {
-            btnCoolThings.BackColor = Color.FromArgb(23, 148, 67);
+            btnCoolThings.BackColor = Color.FromArgb(29, 78, 216);
             showSubMenu(panelSubMenuARPAttack, btnCoolThings);
         }
 
@@ -248,6 +249,7 @@ namespace LanLord
 
         private void btnAbout_Click(object sender, EventArgs e)
         {
+            btnInfo.BackColor = Color.FromArgb(29, 78, 216);
             AbrirFormulario(() => new about());
         }
         #endregion
@@ -257,7 +259,7 @@ namespace LanLord
 
         private void btnInfo_Click(object sender, EventArgs e)
         {
-            btnInfo.BackColor = Color.FromArgb(23, 148, 67);
+            btnInfo.BackColor = Color.FromArgb(29, 78, 216);
             showSubMenu(panelSubMenuInfo, btnInfo);
         }
 
@@ -299,18 +301,9 @@ namespace LanLord
         }
         private void CloseForms(object sender, FormClosedEventArgs e)
         {
-            if (Application.OpenForms["UI_Productos"] == null)
-            {
-                btnARP.BackColor = Color.FromArgb(29, 185, 84);
-            }
-            if (Application.OpenForms["UI_Proveedores"] == null)
-            {
-                btnCoolThings.BackColor = Color.FromArgb(29, 185, 84);
-            }
-            if (Application.OpenForms["UI_Reportes"] == null)
-            {
-                btnInfo.BackColor = Color.FromArgb(29, 185, 84);
-            }
+            btnARP.BackColor = Color.FromArgb(13, 17, 23);
+            btnCoolThings.BackColor = Color.FromArgb(13, 17, 23);
+            btnInfo.BackColor = Color.FromArgb(13, 17, 23);
         }
 
     }
