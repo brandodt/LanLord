@@ -1,0 +1,66 @@
+# This workflow will build and publish the LanLord WinForms desktop application
+# built on .NET 8 (Windows only).
+#
+# For more information on GitHub Actions, refer to https://github.com/features/actions
+
+name: .NET Core Desktop
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: LanLord.sln
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET 8 workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Restore NuGet packages
+    - name: Restore dependencies
+      run: dotnet restore $env:Solution_Name
+
+    # Build the solution
+    - name: Build
+      run: dotnet build $env:Solution_Name --configuration $env:Configuration --no-restore
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    # Publish (Release only) — produces the self-contained x86 binary used by the installer
+    - name: Publish
+      if: matrix.configuration == 'Release'
+      run: >
+        dotnet publish LanLord/LanLord.csproj
+        --configuration Release
+        --runtime win-x86
+        --self-contained true
+        -p:PublishSingleFile=true
+        --output LanLord/bin/Publish
+
+    # Upload build artifacts (Release only)
+    - name: Upload build artifacts
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: LanLord-Publish
+        path: LanLord/bin/Publish
