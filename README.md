@@ -52,24 +52,22 @@ When LanLord starts, the **Adapter Selection** window opens automatically.
 
 ### 3. Understand the Device Table
 
-| Column           | Description                                                                                                                        |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**         | Friendly name of the device (editable — double-click to rename). DNS / HTTP hostnames are appended automatically as they are seen. |
-| **IP**           | Local IPv4 address of the device.                                                                                                  |
-| **MAC / Vendor** | Hardware MAC address plus the OUI vendor name looked up from the IEEE database.                                                    |
-| **Down**         | Current download bandwidth in KB/s (or MB/s).                                                                                      |
-| **Up**           | Current upload bandwidth in KB/s (or MB/s).                                                                                        |
-| **Cap ↓ (KB/s)** | Download speed cap you set for this device (0 = unlimited).                                                                        |
-| **Cap ↑ (KB/s)** | Upload speed cap you set for this device (0 = unlimited).                                                                          |
-| **Block**        | Tick to completely cut off this device from the internet.                                                                          |
-| **Redirect**     | Tick to intercept/spoof this device's traffic (required for bandwidth capping).                                                    |
+| Column               | Description                                                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**             | Friendly name of the device. Right-click → **Rename** to set a custom label. DNS / HTTP hostnames are appended automatically as they are seen. |
+| **IP**               | Local IPv4 address of the device.                                                                                                              |
+| **MAC / Vendor**     | Hardware MAC address plus the OUI vendor name looked up from the IEEE database.                                                                |
+| **Download**         | Current download bandwidth (KB/s or MB/s), updated every second.                                                                               |
+| **Upload**           | Current upload bandwidth (KB/s or MB/s), updated every second.                                                                                 |
+| **DownCap (KB/s)**   | Download speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                  |
+| **UploadCap (KB/s)** | Upload speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                    |
+| **Block**            | Tick to completely cut off this device from the internet. Requires **Start Spoofing** to be active.                                            |
 
 ### 4. Limit Bandwidth
 
-1. In the **Cap ↓** or **Cap ↑** columns, type a value in KB/s for the device you want to limit (e.g. `512` for 512 KB/s).
-2. Make sure the **Redirect** checkbox is ticked for that device so ARP spoofing is active.
-3. Click **Start Spoofing** in the toolbar to begin enforcing the limits.
-4. The status bar will change to `Spoofing active — intercepting network traffic`.
+1. Click **Start Spoofing** in the toolbar. The status bar will change to `Spoofing active — intercepting network traffic`.
+2. In the **DownCap (KB/s)** or **UploadCap (KB/s)** column for a device, type the speed limit you want (e.g. `512` for 512 KB/s, `0` for unlimited).
+3. Use the right-click context menu **Cut Off** shortcut to instantly cap a device to 1 KB/s, or **Remove Caps** to restore unlimited access.
 
 ### 5. Block a Device
 
@@ -77,22 +75,27 @@ When LanLord starts, the **Adapter Selection** window opens automatically.
 - To restore access, untick the checkbox.
 - Block/unblock states are saved in `profiles.xml` and restored on the next launch.
 
-### 6. Live Bandwidth Graph
+### 6. Rename a Device
+
+- Right-click any device row and choose **Rename** to give it a custom label.
+- The name is saved to `profiles.xml` and restored automatically on future launches.
+
+### 7. Live Bandwidth Graph
 
 - Double-click any device row to open a **live bandwidth graph** that plots their download and upload speed over time in real time.
 
-### 7. Device Profiles (Persistent Settings)
+### 8. Device Profiles (Persistent Settings)
 
 - Any custom name, bandwidth cap, or block state you set is automatically saved per MAC address in `profiles.xml`.
 - The next time the same device appears on the network its settings are restored automatically — no need to reconfigure.
 
-### 8. Security Alerts
+### 9. Security Alerts
 
 - **Rogue ARP** — if another device on the network starts impersonating your router, LanLord shows a system-tray balloon notification and logs the event to `security_alerts.txt`.
 - **Port Scan** — if a device probes many ports on a single host, a `[SCAN]` tag is added to its name row and a notification is shown.
 - **DNS / HTTP logs** — all DNS queries and plain-text HTTP hostnames seen from redirected devices are written to `dns_log.txt` and `http_log.txt` respectively.
 
-### 9. System Tray
+### 10. System Tray
 
 - Minimizing the window sends LanLord to the system tray — it keeps running in the background.
 - Right-click the tray icon for quick **Show / Exit** options.

@@ -964,6 +964,91 @@ namespace LanLord
             }
         }
 
+        private void renameItem_Click(object sender, EventArgs e)
+        {
+            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
+            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+            if (string.IsNullOrEmpty(ipStr)) return;
+            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
+            if (pc == null || pc.isLocalPc || pc.isGateway) return;
+
+            string currentName = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
+            // Strip any appended DNS suffix (" → hostname") before showing in input box
+            int arrow = currentName.IndexOf("  \u2192 ");
+            if (arrow >= 0) currentName = currentName.Substring(0, arrow);
+
+            using (Form dlg = new Form())
+            {
+                dlg.Text = "Rename Device";
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.Width = 360;
+                dlg.Height = 150;
+                dlg.BackColor = UITheme.Surface0;
+
+                var lbl = new Label
+                {
+                    Text = "Enter a name for " + ipStr + ":",
+                    ForeColor = UITheme.TextSecondary,
+                    Font = new System.Drawing.Font("Segoe UI", 9f),
+                    Location = new System.Drawing.Point(12, 14),
+                    Size = new System.Drawing.Size(320, 20)
+                };
+                var txt = new TextBox
+                {
+                    Text = currentName,
+                    Location = new System.Drawing.Point(12, 38),
+                    Size = new System.Drawing.Size(320, 24),
+                    BackColor = UITheme.Surface1,
+                    ForeColor = UITheme.TextPrimary,
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Font = new System.Drawing.Font("Segoe UI", 10f)
+                };
+                var btnOk = new Button
+                {
+                    Text = "OK",
+                    DialogResult = DialogResult.OK,
+                    Width = 80,
+                    Height = 28,
+                    Location = new System.Drawing.Point(164, 74),
+                    BackColor = UITheme.Accent,
+                    ForeColor = System.Drawing.Color.White,
+                    FlatStyle = FlatStyle.Flat
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+                var btnCancel = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Width = 80,
+                    Height = 28,
+                    Location = new System.Drawing.Point(254, 74),
+                    BackColor = UITheme.Surface1,
+                    ForeColor = UITheme.TextPrimary,
+                    FlatStyle = FlatStyle.Flat
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+
+                dlg.Controls.AddRange(new System.Windows.Forms.Control[] { lbl, txt, btnOk, btnCancel });
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+                txt.SelectAll();
+
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                string newName = txt.Text.Trim();
+                pc.name = newName;
+                // Preserve any DNS suffix that was already displayed
+                string displayed = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
+                int arrowPos = displayed.IndexOf("  \u2192 ");
+                this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value =
+                    arrowPos >= 0 ? newName + displayed.Substring(arrowPos) : newName;
+                deviceProfiles.Save(pc);
+            }
+        }
+
         private void cutOffItem_Click(object sender, EventArgs e)
         {
             if (!isSpoofingActive)
