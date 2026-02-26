@@ -52,6 +52,6 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo ============================================================
 echo  SUCCESS
-echo  Installer: Setup\Output\LanLord_Setup_4.0.1.exe
+echo  Installer: Setup\Output\LanLord_Setup_4.0.2.exe
 echo ============================================================
 pause

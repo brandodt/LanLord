@@ -27,9 +27,8 @@
 
 ## First Launch
 
-On the very first run you will see a **security notice** reminding you to verify that your copy came from the official GitHub repository.  
-Read it, then click **I Understand** to proceed.  
-This prompt will not appear again on subsequent launches.
+On every launch you will see a **security notice** reminding you to verify that your copy came from the official GitHub repository.  
+Read it, then click **I Understand — Continue** to proceed, or **Quit** to exit.
 
 ---
 
@@ -52,22 +51,24 @@ When LanLord starts, the **Adapter Selection** window opens automatically.
 
 ### 3. Understand the Device Table
 
-| Column               | Description                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**             | Friendly name of the device. Right-click → **Rename** to set a custom label. DNS / HTTP hostnames are appended automatically as they are seen. |
-| **IP**               | Local IPv4 address of the device.                                                                                                              |
-| **MAC / Vendor**     | Hardware MAC address plus the OUI vendor name looked up from the IEEE database.                                                                |
-| **Download**         | Current download bandwidth (KB/s or MB/s), updated every second.                                                                               |
-| **Upload**           | Current upload bandwidth (KB/s or MB/s), updated every second.                                                                                 |
-| **DownCap (KB/s)**   | Download speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                  |
-| **UploadCap (KB/s)** | Upload speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                    |
-| **Block**            | Tick to completely cut off this device from the internet. Requires **Start Spoofing** to be active.                                            |
+| Column               | Description                                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**             | Friendly name of the device. Right-click → **Rename** to set a custom label. DNS / HTTP hostnames are appended automatically (`→ hostname`). Active interventions are prefixed: `[SCAN]` port-scan detected, `[LOSS]` packet loss injected, `[DNS]` DNS spoof active.                                                                                 |
+| **IP**               | Local IPv4 address of the device.                                                                                                                                                                                                                                                                                                                     |
+| **MAC / Vendor**     | Hardware MAC address plus the OUI vendor name looked up from the IEEE database.                                                                                                                                                                                                                                                                       |
+| **Download**         | Current download bandwidth (KB/s or MB/s), updated every second.                                                                                                                                                                                                                                                                                      |
+| **Upload**           | Current upload bandwidth (KB/s or MB/s), updated every second.                                                                                                                                                                                                                                                                                        |
+| **DownCap (KB/s)**   | Download speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                                                                                                                                                                                                                         |
+| **UploadCap (KB/s)** | Upload speed cap for this device (0 = unlimited). Requires **Start Spoofing** to be active.                                                                                                                                                                                                                                                           |
+| **Block**            | Tick to completely cut off this device from the internet. Requires **Start Spoofing** to be active.                                                                                                                                                                                                                                                   |
+| **Spoof**            | Tick to intercept and relay this device's traffic through your machine (MITM). Required for bandwidth caps, packet loss injection, DNS spoofing, DNS/HTTP logging, and OS fingerprinting to work on that device. **Hidden by default** — enable it from the View menu (right-click the column header area). Requires **Start Spoofing** to be active. |
 
 ### 4. Limit Bandwidth
 
 1. Click **Start Spoofing** in the toolbar. The status bar will change to `Spoofing active — intercepting network traffic`.
-2. In the **DownCap (KB/s)** or **UploadCap (KB/s)** column for a device, type the speed limit you want (e.g. `512` for 512 KB/s, `0` for unlimited).
-3. Use the right-click context menu **Cut Off** shortcut to instantly cap a device to 1 KB/s, or **Remove Caps** to restore unlimited access.
+2. Tick the **Spoof** checkbox for the target device (show the column from the View menu if it isn't visible — right-click the column header area and check **Spoof**). The device row turns blue.
+3. In the **DownCap (KB/s)** or **UploadCap (KB/s)** column, type the speed limit you want (e.g. `512` for 512 KB/s, `0` for unlimited).
+4. Use the right-click context menu **Cut Off** shortcut to instantly cap a device to 1 KB/s, or **Remove Caps & Effects** to restore unlimited access.
 
 ### 5. Block a Device
 
@@ -100,12 +101,33 @@ When LanLord starts, the **Adapter Selection** window opens automatically.
 - Minimizing the window sends LanLord to the system tray — it keeps running in the background.
 - Right-click the tray icon for quick **Show / Exit** options.
 
+### 11. Inject Packet Loss
+
+1. Make sure **Start Spoofing** is active.
+2. Tick the **Spoof** checkbox for the target device (show the column from the View menu if hidden). The row turns blue confirming traffic is being intercepted.
+3. Right-click the device row and choose **Set Packet Loss %**.
+4. Enter a value between `1` and `100` (percentage of packets to randomly drop).
+   - `0` disables packet loss for that device.
+5. The device's name cell will show a `[LOSS]` prefix while injection is active.
+6. Right-click → **Remove Caps & Effects** to clear packet loss along with all other controls.
+
+### 12. DNS Spoofing
+
+1. Make sure **Start Spoofing** is active.
+2. Tick the **Spoof** checkbox for the target device (show the column from the View menu if hidden). The row turns blue confirming traffic is being intercepted.
+3. Right-click the device row and choose **DNS Spoof → IP**.
+4. Enter the IPv4 address you want all DNS A-record replies to resolve to (e.g. your own LAN IP to serve a captive portal page).
+5. The device's name cell will show a `[DNS]` prefix while spoofing is active.
+6. Right-click → **Clear DNS Spoof** to restore normal DNS resolution for that device.
+
 ---
 
 ## Features at a Glance
 
 - ARP spoofing-based bandwidth control (cap upload & download per device)
 - Block any device from accessing the internet
+- **Packet loss injection** — randomly drop a configurable % of packets for any device
+- **DNS spoofing** — redirect all DNS A-record replies from a device to a custom IP
 - Live bandwidth graph per device
 - Automatic device re-discovery every 60 seconds
 - OUI vendor lookup from the IEEE database
@@ -115,18 +137,22 @@ When LanLord starts, the **Adapter Selection** window opens automatically.
 - Rogue ARP detector (alerts when another host impersonates your router)
 - Port scan detector
 - Persistent device profiles (name, caps, block state saved per MAC)
+- Row color coding: red tint = blocked, blue tint = redirected/spoofed
 - System tray support with minimize-to-tray
 
 ---
 
 ## Troubleshooting
 
-| Symptom                                     | Fix                                                                                              |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| "Problem installing the drivers" on startup | Run LanLord as Administrator.                                                                    |
-| No devices appear after scanning            | Ensure you selected the correct adapter and that Npcap is installed in WinPcap-compatible mode.  |
-| Bandwidth caps have no effect               | Make sure **Redirect** is checked for the target device and **Start Spoofing** has been clicked. |
-| App is not visible, but icon is in the tray | Click the tray icon or right-click → **Show**.                                                   |
+| Symptom                                                       | Fix                                                                                                                                                                                                            |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Problem installing the drivers" on startup                   | Run LanLord as Administrator.                                                                                                                                                                                  |
+| No devices appear after scanning                              | Ensure you selected the correct adapter and that Npcap is installed in WinPcap-compatible mode.                                                                                                                |
+| Bandwidth caps have no effect                                 | Make sure the **Redirect** checkbox is ticked for the target device and **Start Spoofing** has been clicked.                                                                                                   |
+| App is not visible, but icon is in the tray                   | Click the tray icon or right-click → **Show**.                                                                                                                                                                 |
+| Internet drops for all devices when spoofing starts           | Make sure you are running **v4.0.2 or later**. Earlier versions defaulted all devices to `redirect=true`, intercepting everyone automatically. Update to fix this.                                             |
+| DNS Spoof or Packet Loss has no effect                        | The **Spoof** checkbox must be ticked for the target device (show the column from the View menu if it isn't visible). These features only apply to traffic that is actively being intercepted through LanLord. |
+| Device regains normal internet shortly after being redirected | This is normal ARP cache refresh behavior. LanLord v4.0.2+ counters this automatically by re-poisoning the device immediately when it broadcasts a gratuitous ARP reply.                                       |
 
 ---
 
