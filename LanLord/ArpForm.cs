@@ -836,10 +836,10 @@ namespace LanLord
         private void ArpForm_Shown(object sender, EventArgs e)
         {
             string[] args = Environment.GetCommandLineArgs();
-            if ((args.Length > 1))
+            if (args.Length > 1 && args[1] == "minimize")
             {
                 minimized = true;
-                if (args[1] == "minimize") this.WindowState = FormWindowState.Minimized;
+                this.WindowState = FormWindowState.Minimized;
             }
             Opacity = 1.0;
             SetSpoofDependentColumnsEnabled(false);

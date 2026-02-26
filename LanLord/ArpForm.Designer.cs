@@ -105,7 +105,7 @@ namespace LanLord
             this.btnScanNetwork.Location = new System.Drawing.Point(14, 12);
             this.btnScanNetwork.Size = new System.Drawing.Size(175, 44);
             this.btnScanNetwork.TabIndex = 0;
-            this.btnScanNetwork.Text = "\u27F3  Scan Network";
+            this.btnScanNetwork.Text = "Scan Network";
             this.btnScanNetwork.UseVisualStyleBackColor = false;
             this.btnScanNetwork.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnScanNetwork.Click += new System.EventHandler(this.ToolStripButton1_Click);
@@ -123,7 +123,7 @@ namespace LanLord
             this.btnStartSpoof.Location = new System.Drawing.Point(201, 12);
             this.btnStartSpoof.Size = new System.Drawing.Size(175, 44);
             this.btnStartSpoof.TabIndex = 1;
-            this.btnStartSpoof.Text = "\u25BA  Start Spoofing";
+            this.btnStartSpoof.Text = "Start Spoofing";
             this.btnStartSpoof.UseVisualStyleBackColor = false;
             this.btnStartSpoof.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnStartSpoof.Click += new System.EventHandler(this.ToolStripButton2_Click);
@@ -141,7 +141,7 @@ namespace LanLord
             this.btnStopSpoof.Location = new System.Drawing.Point(388, 12);
             this.btnStopSpoof.Size = new System.Drawing.Size(175, 44);
             this.btnStopSpoof.TabIndex = 2;
-            this.btnStopSpoof.Text = "\u25A0  Stop Spoofing";
+            this.btnStopSpoof.Text = "Stop Spoofing";
             this.btnStopSpoof.UseVisualStyleBackColor = false;
             this.btnStopSpoof.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnStopSpoof.Click += new System.EventHandler(this.ToolStripButton3_Click);
@@ -159,7 +159,7 @@ namespace LanLord
             this.btnBlockAll.Location = new System.Drawing.Point(575, 12);
             this.btnBlockAll.Size = new System.Drawing.Size(130, 44);
             this.btnBlockAll.TabIndex = 3;
-            this.btnBlockAll.Text = "\u26D9  Block All";
+            this.btnBlockAll.Text = "Block All";
             this.btnBlockAll.UseVisualStyleBackColor = false;
             this.btnBlockAll.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnBlockAll.Click += new System.EventHandler(this.btnBlockAll_Click);
@@ -177,7 +177,7 @@ namespace LanLord
             this.btnUnblockAll.Location = new System.Drawing.Point(717, 12);
             this.btnUnblockAll.Size = new System.Drawing.Size(130, 44);
             this.btnUnblockAll.TabIndex = 4;
-            this.btnUnblockAll.Text = "\u2714  Unblock All";
+            this.btnUnblockAll.Text = "Unblock All";
             this.btnUnblockAll.UseVisualStyleBackColor = false;
             this.btnUnblockAll.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnUnblockAll.Click += new System.EventHandler(this.btnUnblockAll_Click);
@@ -195,7 +195,7 @@ namespace LanLord
             this.btnExportCsv.Location = new System.Drawing.Point(859, 12);
             this.btnExportCsv.Size = new System.Drawing.Size(130, 44);
             this.btnExportCsv.TabIndex = 5;
-            this.btnExportCsv.Text = "\u21A7  Export CSV";
+            this.btnExportCsv.Text = "Export CSV";
             this.btnExportCsv.UseVisualStyleBackColor = false;
             this.btnExportCsv.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnExportCsv.Click += new System.EventHandler(this.btnExportCsv_Click);
@@ -467,6 +467,7 @@ namespace LanLord
             this.LanLordTrayIcon.BalloonTipText = "LanLord is minimized";
             this.LanLordTrayIcon.BalloonTipTitle = "\"LanLord\"";
             this.LanLordTrayIcon.ContextMenuStrip = this.LanLordTray;
+            this.LanLordTrayIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.LanLordTrayIcon.Text = "LanLord v3";
             this.LanLordTrayIcon.Visible = true;
             this.LanLordTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.LanLordTrayIcon_MouseDoubleClick);

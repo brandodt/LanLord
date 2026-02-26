@@ -35,11 +35,24 @@ namespace LanLord
             SetStyle(
                 ControlStyles.UserPaint |
                 ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer,
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.SupportsTransparentBackColor,
                 true);
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
             Cursor = Cursors.Hand;
+        }
+
+        // ── Background ───────────────────────────────────────────────
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            // Clear the full rectangle with the parent's color so the four
+            // corners outside the rounded path don't bleed the button's BackColor.
+            if (Parent != null)
+                using (var b = new SolidBrush(Parent.BackColor))
+                    e.Graphics.FillRectangle(b, ClientRectangle);
+            else
+                base.OnPaintBackground(e);
         }
 
         // ── Mouse state ──────────────────────────────────────────────

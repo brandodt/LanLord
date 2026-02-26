@@ -42,9 +42,6 @@
 
   <ItemGroup>
     <!-- Font: RegisterFont() copies this from the app's CWD to C:\Windows\Fonts on first launch -->
-    <Content Include="Resources\Computerfont.ttf" Link="Computerfont.ttf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <!-- npf.sys: WinPcap kernel driver — Driver.create() installs it from the app directory -->
     <Content Include="Resources\npf.sys" Link="npf.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
