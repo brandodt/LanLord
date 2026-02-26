@@ -48,6 +48,21 @@ namespace LanLord
             this.ContextMenuViews.BackColor = UITheme.Surface1;
             this.LanLordTray.Renderer      = darkRenderer;
             this.LanLordTray.BackColor      = UITheme.Surface1;
+
+            // Override the icon stored in the resx with the correct icon file
+            try
+            {
+                string icoPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(Application.ExecutablePath),
+                    "LanLord.ico");
+                if (System.IO.File.Exists(icoPath))
+                {
+                    var icon = new System.Drawing.Icon(icoPath);
+                    this.Icon = icon;
+                    this.LanLordTrayIcon.Icon = icon;
+                }
+            }
+            catch { }
         }
         public void licenseAccepted()
         {

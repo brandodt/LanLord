@@ -38,6 +38,11 @@
       <Link>standards-oui.ieee.org.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Copy the icon next to the exe so ArpForm can load it at runtime for the form/tray -->
+    <Content Include="Resources\dwaynelifter_icon.ico">
+      <Link>LanLord.ico</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="this.ico" />
   </ItemGroup>
 
