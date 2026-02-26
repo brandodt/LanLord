@@ -5,7 +5,7 @@
 ; The compiled installer is written to Setup\Output\LanLord_Setup_4.exe
 
 #define AppName      "LanLord"
-#define AppVersion   "4"
+#define AppVersion   "4.0.0"
 #define AppPublisher "dwaynelifter"
 #define AppURL       "https://github.com/dwaynelifter/LanLord"
 #define AppExeName   "LanLord.exe"
