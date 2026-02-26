@@ -486,78 +486,73 @@ namespace LanLord
 
         private unsafe void ArpForm_Load(object sender, EventArgs e)
         {
-            // Show a one-time security/authenticity notice on first launch.
-            const string FirstLaunchSentinel = "first_launch_ack.txt";
-            if (!System.IO.File.Exists(FirstLaunchSentinel))
+            // Security/authenticity notice — shown on every launch.
+            using (Form notice = new Form())
             {
-                using (Form notice = new Form())
+                notice.Text = "Security Notice — LanLord";
+                notice.StartPosition = FormStartPosition.CenterScreen;
+                notice.FormBorderStyle = FormBorderStyle.FixedDialog;
+                notice.MaximizeBox = false;
+                notice.MinimizeBox = false;
+                notice.Width = 520;
+                notice.Height = 270;
+                notice.BackColor = UITheme.Surface0;
+
+                var lbl = new Label
                 {
-                    notice.Text = "Security Notice — LanLord";
-                    notice.StartPosition = FormStartPosition.CenterScreen;
-                    notice.FormBorderStyle = FormBorderStyle.FixedDialog;
-                    notice.MaximizeBox = false;
-                    notice.MinimizeBox = false;
-                    notice.Width = 520;
-                    notice.Height = 270;
-                    notice.BackColor = UITheme.Surface0;
+                    Text =
+                        "⚠  IMPORTANT — Please verify your download source\r\n\r\n" +
+                        "LanLord uses ARP spoofing to intercept network traffic.\r\n" +
+                        "A malicious copy could silently compromise your network.\r\n\r\n" +
+                        "Only install LanLord from the official source:\r\n" +
+                        "  https://github.com/brandodt/LanLord\r\n\r\n" +
+                        "If you did not download from that address, uninstall\r\n" +
+                        "this copy immediately and obtain a clean release.",
+                    ForeColor = System.Drawing.Color.White,
+                    Font = new System.Drawing.Font("Segoe UI", 9.5f),
+                    Location = new System.Drawing.Point(16, 12),
+                    Size = new System.Drawing.Size(478, 180),
+                    TextAlign = System.Drawing.ContentAlignment.TopLeft
+                };
 
-                    var lbl = new Label
-                    {
-                        Text =
-                            "⚠  IMPORTANT — Please verify your download source\r\n\r\n" +
-                            "LanLord uses ARP spoofing to intercept network traffic.\r\n" +
-                            "A malicious copy could silently compromise your network.\r\n\r\n" +
-                            "Only install LanLord from the official source:\r\n" +
-                            "  https://github.com/brandodt/LanLord\r\n\r\n" +
-                            "If you did not download from that address, uninstall\r\n" +
-                            "this copy immediately and obtain a clean release.",
-                        ForeColor = System.Drawing.Color.White,
-                        Font = new System.Drawing.Font("Segoe UI", 9.5f),
-                        Location = new System.Drawing.Point(16, 12),
-                        Size = new System.Drawing.Size(478, 180),
-                        TextAlign = System.Drawing.ContentAlignment.TopLeft
-                    };
+                var btnOk = new Button
+                {
+                    Text = "I Understand — Continue",
+                    DialogResult = DialogResult.OK,
+                    Width = 200,
+                    Height = 32,
+                    Left = notice.ClientSize.Width / 2 - 210,
+                    Top = 200,
+                    BackColor = UITheme.Accent,
+                    ForeColor = System.Drawing.Color.White,
+                    FlatStyle = FlatStyle.Flat
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
 
-                    var btnOk = new Button
-                    {
-                        Text = "I Understand — Continue",
-                        DialogResult = DialogResult.OK,
-                        Width = 200,
-                        Height = 32,
-                        Left = notice.ClientSize.Width / 2 - 210,
-                        Top = 200,
-                        BackColor = UITheme.Accent,
-                        ForeColor = System.Drawing.Color.White,
-                        FlatStyle = FlatStyle.Flat
-                    };
-                    btnOk.FlatAppearance.BorderSize = 0;
+                var btnQuit = new Button
+                {
+                    Text = "Quit",
+                    DialogResult = DialogResult.Cancel,
+                    Width = 90,
+                    Height = 32,
+                    Left = notice.ClientSize.Width / 2 + 10,
+                    Top = 200,
+                    BackColor = UITheme.Surface1,
+                    ForeColor = System.Drawing.Color.White,
+                    FlatStyle = FlatStyle.Flat
+                };
+                btnQuit.FlatAppearance.BorderSize = 0;
 
-                    var btnQuit = new Button
-                    {
-                        Text = "Quit",
-                        DialogResult = DialogResult.Cancel,
-                        Width = 90,
-                        Height = 32,
-                        Left = notice.ClientSize.Width / 2 + 10,
-                        Top = 200,
-                        BackColor = UITheme.Surface1,
-                        ForeColor = System.Drawing.Color.White,
-                        FlatStyle = FlatStyle.Flat
-                    };
-                    btnQuit.FlatAppearance.BorderSize = 0;
+                notice.Controls.Add(lbl);
+                notice.Controls.Add(btnOk);
+                notice.Controls.Add(btnQuit);
+                notice.AcceptButton = btnOk;
+                notice.CancelButton = btnQuit;
 
-                    notice.Controls.Add(lbl);
-                    notice.Controls.Add(btnOk);
-                    notice.Controls.Add(btnQuit);
-                    notice.AcceptButton = btnOk;
-                    notice.CancelButton = btnQuit;
-
-                    if (notice.ShowDialog(this) != DialogResult.OK)
-                    {
-                        this.Dispose();
-                        return;
-                    }
-                    try { System.IO.File.WriteAllText(FirstLaunchSentinel, "acknowledged"); } catch { }
+                if (notice.ShowDialog(this) != DialogResult.OK)
+                {
+                    this.Dispose();
+                    return;
                 }
             }
 
@@ -576,14 +571,7 @@ namespace LanLord
             //LanLordTrayIcon.Icon = LanLord.Properties.Resources.dwaynelifter_icon.ico;
             if ((IntPtr)this.driver.openDeviceDriver((sbyte*)(void*)Marshal.StringToHGlobalAnsi("npf")) == IntPtr.Zero)
             {
-                if (System.IO.File.Exists("license.txt"))
-                {
-                    CWizard cwizard = new CWizard();
-                    cwizard.Show((IWin32Window)this);
-                    cwizard.richTextBox1.Text = System.IO.File.ReadAllText("license.txt", Encoding.UTF8);
-                }
-                else
-                    this.licenseAccepted();
+                this.licenseAccepted();
             }
             else
             {
@@ -931,14 +919,18 @@ namespace LanLord
             rowContextMenu.Font      = new System.Drawing.Font("Segoe UI", 9.5F);
             rowContextMenu.Renderer  = new DarkMenuRenderer();
 
-            var cutOffItem = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
+            var renameItem  = new ToolStripMenuItem("\u270E  Rename");
+            var cutOffItem  = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
             var unblockItem = new ToolStripMenuItem("\u21A9  Remove Caps");
-            var graphItem = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
+            var graphItem   = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
 
-            cutOffItem.Click += cutOffItem_Click;
+            renameItem.Click  += renameItem_Click;
+            cutOffItem.Click  += cutOffItem_Click;
             unblockItem.Click += unblockItem_Click;
-            graphItem.Click += graphItem_Click;
+            graphItem.Click   += graphItem_Click;
 
+            rowContextMenu.Items.Add(renameItem);
+            rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(cutOffItem);
             rowContextMenu.Items.Add(unblockItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());

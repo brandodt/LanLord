@@ -5,6 +5,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>LanLord</RootNamespace>
     <AssemblyName>LanLord</AssemblyName>
+    <ApplicationIcon>Resources\dwaynelifter_icon.ico</ApplicationIcon>
     <!-- WinPcap native driver is x86-only; must match to avoid runtime load failures -->
     <PlatformTarget>x86</PlatformTarget>
     <UseWindowsForms>true</UseWindowsForms>
