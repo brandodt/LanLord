@@ -1,13 +1,37 @@
-ONCE YOU HAVE INSTALLED "LanLordV3_Installer.msi" FOLLOW THIS INSTRUCTIONS:
+LANLORD V4 — INSTALLATION INSTRUCTIONS
+=======================================
 
-(YOU OBVIOUSLY WILL NOT FIND THE PATH ON INSTRUCTION NUMBER 1 IF YOU HAVEN'T ISTALLED IT YET, SO GO AND DO THAT FIRST)
+PREREQUISITES
+-------------
+  • Windows 10 or later (x86 / x64)
+  • Administrator privileges are required
+  • .NET 8 Desktop Runtime (x86) must be installed
+    Download: https://dotnet.microsoft.com/download/dotnet/8.0
 
 
-1.- Go to "C:\Program Files (x86)\nov0caina\LanLordV3".
+STEP-BY-STEP
+------------
 
-2.- Once you're in the LanLordV3 folder, install WinPcap_4_1_3.exe this will install needed software to use your 
-wifi chipset.
+1. Install Npcap (packet capture driver)
+   - Run "npcap-1.87.exe" found in the application folder.
+   - During installation, CHECK "Install Npcap in WinPcap API-compatible Mode".
+     (LanLord will not work without this option enabled.)
+   - Finish the installer and reboot if prompted.
 
-3.- Install the Computerfont.ttf, this font is used by LanLordV3 and will look horrible without it.
+2. Run LanLord
+   - Right-click "LanLord.exe" and select "Run as administrator".
+     (Administrator rights are required to capture and inject network packets.)
+   - On first launch, select your active network adapter from the adapter selection window and click OK.
 
-4.- Thats it, make a fair use of this tool and enjoy!.
+3. That's it — make fair and responsible use of this tool and enjoy!
+
+
+NOTES
+-----
+  • If you see "problem installing the drivers", Npcap is either not installed
+    or was installed without WinPcap API-compatible Mode. Re-run npcap-1.87.exe
+    and enable that option.
+  • LanLord minimizes to the system tray when the window is minimized.
+    Double-click the tray icon to restore it.
+  • ARP spoofing features require the target devices to be on the same
+    local network (subnet) as the machine running LanLord.

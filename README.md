@@ -2,18 +2,128 @@
 
 ## Control your network bandwidth with LanLord.
 
-Requirements:
-- You need to have Npcap installed (WinPcap-compatible mode). The installer will prompt you to install it automatically.
-- Your Wi-Fi chipset must be compatible with monitor mode.
+> **Security notice:** Only download LanLord from the official source at **https://github.com/brandodt/LanLord**.  
+> Copies obtained elsewhere may contain malware or other harmful modifications.
 
-Current Functions:
-- ARP Spoofing.
-- See how many devices are connected to your network.
-- Check the IP's and Mac addresses of the devices on your network.
-- Easily control the internet bandwidth of each device connected to your network.
-- Block devices from your network.
-- Live bandwidth graph per device.
-- System tray support.
+---
+
+## Requirements
+
+- **Windows 10/11** (x86 or x64)
+- **Npcap** installed in WinPcap-compatible mode — the installer will prompt you to install it automatically if it is missing.
+- **Administrator privileges** — required so the app can open the network driver.
+- A Wi-Fi or Ethernet adapter that supports promiscuous / monitor mode (most modern adapters work fine).
+
+---
+
+## Installation
+
+1. Download the latest release installer (`LanLord-Setup.exe`) from the [Releases](https://github.com/brandodt/LanLord/releases) page.
+2. Run the installer and follow the on-screen instructions.
+3. If Npcap is not already installed the setup will guide you through installing it — make sure to tick **"WinPcap API-compatible mode"** during the Npcap install.
+4. Launch **LanLord** from the Start Menu or the desktop shortcut.
+
+---
+
+## First Launch
+
+On the very first run you will see a **security notice** reminding you to verify that your copy came from the official GitHub repository.  
+Read it, then click **I Understand** to proceed.  
+This prompt will not appear again on subsequent launches.
+
+---
+
+## How to Use
+
+### 1. Select a Network Adapter
+
+When LanLord starts, the **Adapter Selection** window opens automatically.
+
+- Choose the network adapter you are connected to from the drop-down list (e.g. your Wi-Fi or Ethernet card).
+- Your adapter's IP address and type are shown below the list to help you identify the right one.
+- Click **OK** to confirm.
+
+### 2. Scan for Devices
+
+- The main window shows a tree-grid with your router at the root and discovered devices as child rows.
+- Click the **Scan** button (toolbar) to actively discover all devices currently on your network.  
+  The status bar updates in real time: `Scanning network... X/Y` → `Scan complete — N device(s) found`.
+- LanLord also re-scans automatically every 60 seconds in the background.
+
+### 3. Understand the Device Table
+
+| Column           | Description                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**         | Friendly name of the device (editable — double-click to rename). DNS / HTTP hostnames are appended automatically as they are seen. |
+| **IP**           | Local IPv4 address of the device.                                                                                                  |
+| **MAC / Vendor** | Hardware MAC address plus the OUI vendor name looked up from the IEEE database.                                                    |
+| **Down**         | Current download bandwidth in KB/s (or MB/s).                                                                                      |
+| **Up**           | Current upload bandwidth in KB/s (or MB/s).                                                                                        |
+| **Cap ↓ (KB/s)** | Download speed cap you set for this device (0 = unlimited).                                                                        |
+| **Cap ↑ (KB/s)** | Upload speed cap you set for this device (0 = unlimited).                                                                          |
+| **Block**        | Tick to completely cut off this device from the internet.                                                                          |
+| **Redirect**     | Tick to intercept/spoof this device's traffic (required for bandwidth capping).                                                    |
+
+### 4. Limit Bandwidth
+
+1. In the **Cap ↓** or **Cap ↑** columns, type a value in KB/s for the device you want to limit (e.g. `512` for 512 KB/s).
+2. Make sure the **Redirect** checkbox is ticked for that device so ARP spoofing is active.
+3. Click **Start Spoofing** in the toolbar to begin enforcing the limits.
+4. The status bar will change to `Spoofing active — intercepting network traffic`.
+
+### 5. Block a Device
+
+- Tick the **Block** checkbox for any device to deny it internet access entirely.
+- To restore access, untick the checkbox.
+- Block/unblock states are saved in `profiles.xml` and restored on the next launch.
+
+### 6. Live Bandwidth Graph
+
+- Double-click any device row to open a **live bandwidth graph** that plots their download and upload speed over time in real time.
+
+### 7. Device Profiles (Persistent Settings)
+
+- Any custom name, bandwidth cap, or block state you set is automatically saved per MAC address in `profiles.xml`.
+- The next time the same device appears on the network its settings are restored automatically — no need to reconfigure.
+
+### 8. Security Alerts
+
+- **Rogue ARP** — if another device on the network starts impersonating your router, LanLord shows a system-tray balloon notification and logs the event to `security_alerts.txt`.
+- **Port Scan** — if a device probes many ports on a single host, a `[SCAN]` tag is added to its name row and a notification is shown.
+- **DNS / HTTP logs** — all DNS queries and plain-text HTTP hostnames seen from redirected devices are written to `dns_log.txt` and `http_log.txt` respectively.
+
+### 9. System Tray
+
+- Minimizing the window sends LanLord to the system tray — it keeps running in the background.
+- Right-click the tray icon for quick **Show / Exit** options.
+
+---
+
+## Features at a Glance
+
+- ARP spoofing-based bandwidth control (cap upload & download per device)
+- Block any device from accessing the internet
+- Live bandwidth graph per device
+- Automatic device re-discovery every 60 seconds
+- OUI vendor lookup from the IEEE database
+- Passive OS fingerprinting (TTL-based)
+- DNS query sniffer (logs hostnames to `dns_log.txt`)
+- HTTP Host sniffer (logs browsing destinations to `http_log.txt`)
+- Rogue ARP detector (alerts when another host impersonates your router)
+- Port scan detector
+- Persistent device profiles (name, caps, block state saved per MAC)
+- System tray support with minimize-to-tray
+
+---
+
+## Troubleshooting
+
+| Symptom                                     | Fix                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| "Problem installing the drivers" on startup | Run LanLord as Administrator.                                                                    |
+| No devices appear after scanning            | Ensure you selected the correct adapter and that Npcap is installed in WinPcap-compatible mode.  |
+| Bandwidth caps have no effect               | Make sure **Redirect** is checked for the target device and **Start Spoofing** has been clicked. |
+| App is not visible, but icon is in the tray | Click the tray icon or right-click → **Show**.                                                   |
 
 ---
 
