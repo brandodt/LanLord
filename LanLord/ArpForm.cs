@@ -31,6 +31,23 @@ namespace LanLord
         private ContextMenuStrip rowContextMenu;
         private int _contextMenuRowIndex = -1;
         private DeviceProfiles deviceProfiles = new DeviceProfiles();
+
+        // Captive portal: per-device HTTP redirect server (TcpListener on port 80)
+        private System.Net.Sockets.TcpListener _captiveListener = null;
+        private ToolStripMenuItem _captivePortalItem;   // kept for check-state updates
+        private string _captivePortalHtml =
+            "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Network Notice</title>" +
+            "<style>body{margin:0;display:flex;justify-content:center;align-items:center;" +
+            "min-height:100vh;background:#0d1117;font-family:Segoe UI,Arial,sans-serif;}" +
+            ".box{padding:40px 50px;background:#161b22;border-radius:14px;text-align:center;" +
+            "max-width:500px;box-shadow:0 8px 32px #0008;}" +
+            "h1{color:#f85149;margin-bottom:12px;}p{color:#8b949e;line-height:1.6;}" +
+            ".badge{display:inline-block;margin-top:20px;padding:6px 16px;border-radius:20px;" +
+            "background:#21262d;color:#58a6ff;font-size:.85rem;}</style></head>" +
+            "<body><div class='box'><h1>&#x26A0; Network Access Restricted</h1>" +
+            "<p>Your access to this network has been restricted by the network administrator.</p>" +
+            "<div class='badge'>LanLord Captive Portal</div></div></body></html>";
+
         public NetworkInterface nicNet;
         public static ArpForm instance;
         public ArpForm()
@@ -212,6 +229,19 @@ namespace LanLord
             this.pcs.addPcToList(pc);
             this.timer2.Interval = 5000;
             this.timer2.Start();
+            // Captive portal: log interceptions to captive_log.txt
+            carp.OnCaptivePortalHit = (cpPC, host) =>
+            {
+                try
+                {
+                    string logLine = string.Format("[{0}]  CAPTIVE  {1,-17}  {2}{3}",
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        cpPC.ip.ToString(), host, Environment.NewLine);
+                    System.IO.File.AppendAllText("captive_log.txt", logLine, System.Text.Encoding.UTF8);
+                }
+                catch { }
+            };
+
             this.treeGridView1.Nodes[0].Expand();
             // Auto-start initial scan so the user sees devices immediately without pressing Scan
             triggerDiscovery();
@@ -406,6 +436,11 @@ namespace LanLord
             for (int i = 0; i < this.treeGridView1.Nodes[0].Nodes.Count; i++)
                 this.treeGridView1.Nodes[0].Nodes[i].Cells[7].Value = (object)false;
             SetSpoofDependentColumnsEnabled(false);
+            // Disable captive portal on all devices and stop the local HTTP server
+            if (this.pcs != null)
+                foreach (var p in this.pcs.pclist)
+                    p.captivePortalEnabled = false;
+            stopCaptivePortalServer();
         }
 
         private void ToolStripButton4_Click(object sender, EventArgs e)
@@ -941,6 +976,7 @@ namespace LanLord
             var portsItem    = new ToolStripMenuItem("\uD83D\uDD0D  Check Ports");
             var dnsLogItem   = new ToolStripMenuItem("\uD83D\uDCCB  DNS Log");
             var httpLogItem  = new ToolStripMenuItem("\uD83C\uDF10  HTTP Log");
+            _captivePortalItem = new ToolStripMenuItem("\uD83D\uDEAB  Captive Portal");
 
             renameItem.Click   += renameItem_Click;
             cutOffItem.Click   += cutOffItem_Click;
@@ -949,6 +985,7 @@ namespace LanLord
             portsItem.Click    += portsItem_Click;
             dnsLogItem.Click   += dnsLogItem_Click;
             httpLogItem.Click  += httpLogItem_Click;
+            _captivePortalItem.Click += captivePortalItem_Click;
 
             rowContextMenu.Items.Add(renameItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
@@ -960,6 +997,20 @@ namespace LanLord
             rowContextMenu.Items.Add(portsItem);
             rowContextMenu.Items.Add(dnsLogItem);
             rowContextMenu.Items.Add(httpLogItem);
+            rowContextMenu.Items.Add(new ToolStripSeparator());
+            rowContextMenu.Items.Add(_captivePortalItem);
+
+            // Update captive portal check-mark when the menu opens
+            rowContextMenu.Opening += (s, ev) =>
+            {
+                if (_contextMenuRowIndex < 2 || this.pcs == null) return;
+                string rowIp = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+                if (string.IsNullOrEmpty(rowIp)) return;
+                PC rowPc = this.pcs.getPCFromIP(tools.getIpAddress(rowIp).GetAddressBytes());
+                bool active = rowPc != null && rowPc.captivePortalEnabled;
+                _captivePortalItem.Text    = active ? "\uD83D\uDEAB  Captive Portal  \u2714 ON" : "\uD83D\uDEAB  Captive Portal";
+                _captivePortalItem.Checked = active;
+            };
 
             // Remove the default context menu from the grid and route manually
             this.treeGridView1.ContextMenuStrip = null;
@@ -1387,6 +1438,222 @@ namespace LanLord
                 if (this.cArp != null)
                     this.cArp.OnHttpHost -= handler;
             };
+        }
+
+        private void captivePortalItem_Click(object sender, EventArgs e)
+        {
+            if (!isSpoofingActive)
+            {
+                this.lblStatus.Text = "  \u26A0 Start Spoofing first to use Captive Portal";
+                return;
+            }
+            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
+            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+            if (string.IsNullOrEmpty(ipStr)) return;
+            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
+            if (pc == null || pc.isLocalPc || pc.isGateway) return;
+
+            showCaptivePortalDialog(pc, ipStr);
+        }
+
+        private void showCaptivePortalDialog(PC pc, string ipStr)
+        {
+            Form dlg = new Form();
+            dlg.Text = "Captive Portal \u2014 " + ipStr;
+            dlg.StartPosition = FormStartPosition.CenterParent;
+            dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+            dlg.MaximizeBox = false; dlg.MinimizeBox = false;
+            dlg.Width = 520; dlg.Height = 430;
+            dlg.BackColor = UITheme.Surface0;
+
+            var lblInfo = new Label
+            {
+                Text = pc.captivePortalEnabled
+                     ? "\u2714  Captive portal is ACTIVE for " + ipStr
+                     : "Enable captive portal for " + ipStr + ":",
+                ForeColor = pc.captivePortalEnabled ? System.Drawing.Color.LightGreen : UITheme.TextSecondary,
+                Font = new System.Drawing.Font("Segoe UI", 9f),
+                Location = new System.Drawing.Point(12, 12),
+                Size = new System.Drawing.Size(480, 18)
+            };
+
+            var lblHtml = new Label
+            {
+                Text = "Portal page HTML (edit to customise the message shown to the device):",
+                ForeColor = UITheme.TextMuted,
+                Font = new System.Drawing.Font("Segoe UI", 8.5f),
+                Location = new System.Drawing.Point(12, 36),
+                Size = new System.Drawing.Size(480, 18)
+            };
+
+            var txtHtml = new TextBox
+            {
+                Text = _captivePortalHtml,
+                Multiline = true,
+                ScrollBars = ScrollBars.Both,
+                WordWrap = false,
+                Location = new System.Drawing.Point(12, 58),
+                Size = new System.Drawing.Size(480, 270),
+                BackColor = UITheme.Surface1,
+                ForeColor = UITheme.TextPrimary,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new System.Drawing.Font("Consolas", 8.5f)
+            };
+
+            var btnToggle = new Button
+            {
+                Text = pc.captivePortalEnabled ? "Disable Portal" : "Enable Portal",
+                DialogResult = DialogResult.OK,
+                Width = 130,
+                Height = 32,
+                Location = new System.Drawing.Point(12, 342),
+                BackColor = pc.captivePortalEnabled ? UITheme.Danger : UITheme.Accent,
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnToggle.FlatAppearance.BorderSize = 0;
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Width = 90,
+                Height = 32,
+                Location = new System.Drawing.Point(154, 342),
+                BackColor = UITheme.Surface1,
+                ForeColor = UITheme.TextPrimary,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+
+            dlg.Controls.AddRange(new System.Windows.Forms.Control[] { lblInfo, lblHtml, txtHtml, btnToggle, btnCancel });
+            dlg.AcceptButton = btnToggle;
+            dlg.CancelButton = btnCancel;
+
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            // Persist edited HTML
+            _captivePortalHtml = txtHtml.Text;
+
+            // Toggle the per-device flag
+            pc.captivePortalEnabled = !pc.captivePortalEnabled;
+
+            if (pc.captivePortalEnabled)
+            {
+                startCaptivePortalServer();
+                this.lblStatus.Text = "  \uD83D\uDEAB Captive portal active for " + ipStr;
+            }
+            else
+            {
+                // Stop the server only if no other device still has the portal enabled
+                bool anyActive = false;
+                if (this.pcs != null)
+                    foreach (var p in this.pcs.pclist)
+                        if (p.captivePortalEnabled) { anyActive = true; break; }
+                if (!anyActive)
+                    stopCaptivePortalServer();
+                this.lblStatus.Text = "  Captive portal disabled for " + ipStr;
+            }
+        }
+
+        /// <summary>
+        /// Starts a raw TcpListener on port 80 that serves the captive portal page.
+        /// This avoids HttpListener's netsh URL-ACL requirement while still working
+        /// with DNS-hijacked connections from iOS and Android devices.
+        /// Does nothing if the server is already running.
+        /// </summary>
+        private void startCaptivePortalServer()
+        {
+            if (_captiveListener != null) return;
+            // Add an inbound Windows Firewall rule so the device can reach us on port 80
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = "advfirewall firewall add rule name=\"LanLord Captive Portal\" dir=in action=allow protocol=TCP localport=80 profile=any",
+                    UseShellExecute = false,
+                    CreateNoWindow  = true
+                })?.WaitForExit(3000);
+            }
+            catch { }
+            try
+            {
+                _captiveListener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Any, 80);
+                _captiveListener.Start();
+                if (this.cArp != null)
+                    this.cArp.captivePortalUrl = "http://" + new System.Net.IPAddress(this.cArp.localIP) + "/";
+                // Service loop runs on a background Task (Form-side async is acceptable)
+                System.Threading.Tasks.Task.Run((Action)serveCaptiveRequests);
+            }
+            catch (Exception ex)
+            {
+                if (_captiveListener != null) { try { _captiveListener.Stop(); } catch { } }
+                _captiveListener = null;
+                MessageBox.Show(
+                    "Could not start captive portal server on port 80:\n" + ex.Message +
+                    "\n\nMake sure LanLord is running as Administrator and that nothing else is using port 80.",
+                    "Captive Portal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Accepts TCP connections on port 80 and responds with the portal HTML page.
+        /// Runs on a background Task until <see cref="stopCaptivePortalServer"/> is called.
+        /// </summary>
+        private void serveCaptiveRequests()
+        {
+            while (_captiveListener != null)
+            {
+                System.Net.Sockets.TcpClient client;
+                try { client = _captiveListener.AcceptTcpClient(); }
+                catch { break; }
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        using (client)
+                        {
+                            var ns = client.GetStream();
+                            // Drain the HTTP request (we don't need to parse it)
+                            byte[] reqBuf = new byte[4096];
+                            ns.ReadTimeout = 2000;
+                            try { ns.Read(reqBuf, 0, reqBuf.Length); } catch { }
+                            // Send HTTP 200 with the portal page
+                            byte[] body    = System.Text.Encoding.UTF8.GetBytes(_captivePortalHtml);
+                            string hdr     = "HTTP/1.1 200 OK\r\n" +
+                                             "Content-Type: text/html; charset=utf-8\r\n" +
+                                             "Content-Length: " + body.Length + "\r\n" +
+                                             "Connection: close\r\n\r\n";
+                            byte[] hdrBytes = System.Text.Encoding.ASCII.GetBytes(hdr);
+                            ns.Write(hdrBytes, 0, hdrBytes.Length);
+                            ns.Write(body,     0, body.Length);
+                        }
+                    }
+                    catch { }
+                });
+            }
+        }
+
+        /// <summary>Stops the captive portal HTTP server, clears the redirect URL, and removes the firewall rule.</summary>
+        private void stopCaptivePortalServer()
+        {
+            if (_captiveListener == null) return;
+            try { _captiveListener.Stop(); } catch { }
+            _captiveListener = null;
+            if (this.cArp != null) this.cArp.captivePortalUrl = null;
+            // Remove the temporary firewall rule added at start
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = "advfirewall firewall delete rule name=\"LanLord Captive Portal\"",
+                    UseShellExecute = false,
+                    CreateNoWindow  = true
+                })?.WaitForExit(3000);
+            }
+            catch { }
         }
 
         private void TreeGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)

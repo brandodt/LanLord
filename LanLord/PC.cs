@@ -41,6 +41,11 @@ namespace LanLord
         public string osGuess;
 
         public bool isSuspectedScanner;
+
+        // When true the redirector intercepts this device's HTTP (port 80) requests
+        // and replies with an HTTP 302 redirect to the captive portal page instead of
+        // forwarding the packet to the real server.
+        public bool captivePortalEnabled;
     }
 #pragma warning restore  // Falta el comentario XML para el tipo o miembro visible p�blicamente
 }
