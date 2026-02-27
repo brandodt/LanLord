@@ -938,11 +938,13 @@ namespace LanLord
             var cutOffItem  = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
             var unblockItem = new ToolStripMenuItem("\u21A9  Remove Caps");
             var graphItem   = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
+            var portsItem   = new ToolStripMenuItem("\uD83D\uDD0D  Check Ports");
 
             renameItem.Click  += renameItem_Click;
             cutOffItem.Click  += cutOffItem_Click;
             unblockItem.Click += unblockItem_Click;
             graphItem.Click   += graphItem_Click;
+            portsItem.Click   += portsItem_Click;
 
             rowContextMenu.Items.Add(renameItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
@@ -950,6 +952,8 @@ namespace LanLord
             rowContextMenu.Items.Add(unblockItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(graphItem);
+            rowContextMenu.Items.Add(new ToolStripSeparator());
+            rowContextMenu.Items.Add(portsItem);
 
             // Remove the default context menu from the grid and route manually
             this.treeGridView1.ContextMenuStrip = null;
@@ -1101,6 +1105,126 @@ namespace LanLord
             PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
             if (pc == null) return;
             new BandwidthGraphForm(pc).Show(this);
+        }
+
+        private void portsItem_Click(object sender, EventArgs e)
+        {
+            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
+            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+            if (string.IsNullOrEmpty(ipStr)) return;
+
+            // Common TCP ports to probe
+            int[] ports = {
+                21, 22, 23, 25, 53, 80, 110, 135, 139, 143,
+                443, 445, 554, 587, 1080, 1433, 1900, 3306, 3389,
+                5900, 6881, 7070, 8080, 8443, 8888, 9100, 49152
+            };
+
+            // Build the scanner dialog
+            Form dlg = new Form();
+            dlg.Text = "Port Scan — " + ipStr;
+            dlg.StartPosition = FormStartPosition.CenterParent;
+            dlg.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            dlg.Width  = 420;
+            dlg.Height = 480;
+            dlg.MinimumSize = new System.Drawing.Size(320, 320);
+            dlg.BackColor = UITheme.Surface0;
+
+            var lblTitle = new Label
+            {
+                Text = "Scanning " + ipStr + " (" + ports.Length + " ports)...",
+                ForeColor = UITheme.TextSecondary,
+                Font = new System.Drawing.Font("Segoe UI", 9f),
+                Location = new System.Drawing.Point(10, 8),
+                Size = new System.Drawing.Size(390, 18),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            var txtResults = new TextBox
+            {
+                Multiline   = true,
+                ReadOnly    = true,
+                ScrollBars  = ScrollBars.Vertical,
+                Location    = new System.Drawing.Point(10, 32),
+                Size        = new System.Drawing.Size(382, 380),
+                BackColor   = UITheme.Surface1,
+                ForeColor   = UITheme.TextPrimary,
+                BorderStyle = BorderStyle.None,
+                Font        = new System.Drawing.Font("Consolas", 9.5f),
+                Anchor      = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            dlg.Controls.Add(lblTitle);
+            dlg.Controls.Add(txtResults);
+            dlg.Show(this);
+
+            // Run scan on background thread; marshal results to UI thread
+            System.Threading.Thread scanThread = new System.Threading.Thread(() =>
+            {
+                int open = 0;
+                int connectTimeoutMs = 400;
+
+                // Run all probes in parallel using Tasks so the overall scan is fast
+                var tasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                var results = new System.Collections.Concurrent.ConcurrentBag<(int port, bool isOpen)>();
+
+                foreach (int port in ports)
+                {
+                    int p = port;
+                    tasks.Add(System.Threading.Tasks.Task.Run(async () =>
+                    {
+                        bool isOpen = false;
+                        try
+                        {
+                            using (var tc = new System.Net.Sockets.TcpClient())
+                            {
+                                var cts = new System.Threading.CancellationTokenSource(connectTimeoutMs);
+                                await tc.ConnectAsync(ipStr, p).WaitAsync(cts.Token);
+                                isOpen = true;
+                            }
+                        }
+                        catch { }
+                        results.Add((p, isOpen));
+
+                        // Append result line to the textbox live
+                        string line = string.Format("{0,-6}  {1}\r\n",
+                            p, isOpen ? "OPEN" : "closed");
+                        if (!dlg.IsDisposed)
+                        {
+                            try
+                            {
+                                dlg.Invoke((Action)(() =>
+                                {
+                                    if (!txtResults.IsDisposed)
+                                        txtResults.AppendText(line);
+                                }));
+                            }
+                            catch { }
+                        }
+                    }));
+                }
+
+                System.Threading.Tasks.Task.WaitAll(tasks.ToArray());
+
+                // Count open ports and update label
+                foreach (var r in results)
+                    if (r.isOpen) open++;
+
+                if (!dlg.IsDisposed)
+                {
+                    try
+                    {
+                        dlg.Invoke((Action)(() =>
+                        {
+                            if (!lblTitle.IsDisposed)
+                                lblTitle.Text = "Scan complete — " + open + " open port(s) found on " + ipStr;
+                        }));
+                    }
+                    catch { }
+                }
+            });
+            scanThread.IsBackground = true;
+            scanThread.Start();
         }
 
         private void TreeGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
