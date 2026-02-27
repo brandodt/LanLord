@@ -341,3 +341,6 @@ healthchecksdb
 
 .github/
 .vscode/
+
+# Setup installer output — compiled .exe files are not tracked in source control
+Setup/Output/
