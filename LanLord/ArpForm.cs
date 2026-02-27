@@ -934,17 +934,21 @@ namespace LanLord
             rowContextMenu.Font      = new System.Drawing.Font("Segoe UI", 9.5F);
             rowContextMenu.Renderer  = new DarkMenuRenderer();
 
-            var renameItem  = new ToolStripMenuItem("\u270E  Rename");
-            var cutOffItem  = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
-            var unblockItem = new ToolStripMenuItem("\u21A9  Remove Caps");
-            var graphItem   = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
-            var portsItem   = new ToolStripMenuItem("\uD83D\uDD0D  Check Ports");
+            var renameItem   = new ToolStripMenuItem("\u270E  Rename");
+            var cutOffItem   = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
+            var unblockItem  = new ToolStripMenuItem("\u21A9  Remove Caps");
+            var graphItem    = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
+            var portsItem    = new ToolStripMenuItem("\uD83D\uDD0D  Check Ports");
+            var dnsLogItem   = new ToolStripMenuItem("\uD83D\uDCCB  DNS Log");
+            var httpLogItem  = new ToolStripMenuItem("\uD83C\uDF10  HTTP Log");
 
-            renameItem.Click  += renameItem_Click;
-            cutOffItem.Click  += cutOffItem_Click;
-            unblockItem.Click += unblockItem_Click;
-            graphItem.Click   += graphItem_Click;
-            portsItem.Click   += portsItem_Click;
+            renameItem.Click   += renameItem_Click;
+            cutOffItem.Click   += cutOffItem_Click;
+            unblockItem.Click  += unblockItem_Click;
+            graphItem.Click    += graphItem_Click;
+            portsItem.Click    += portsItem_Click;
+            dnsLogItem.Click   += dnsLogItem_Click;
+            httpLogItem.Click  += httpLogItem_Click;
 
             rowContextMenu.Items.Add(renameItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
@@ -954,6 +958,8 @@ namespace LanLord
             rowContextMenu.Items.Add(graphItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(portsItem);
+            rowContextMenu.Items.Add(dnsLogItem);
+            rowContextMenu.Items.Add(httpLogItem);
 
             // Remove the default context menu from the grid and route manually
             this.treeGridView1.ContextMenuStrip = null;
@@ -1225,6 +1231,162 @@ namespace LanLord
             });
             scanThread.IsBackground = true;
             scanThread.Start();
+        }
+
+        private void dnsLogItem_Click(object sender, EventArgs e)
+        {
+            if (_contextMenuRowIndex < 2 || this.pcs == null || this.cArp == null) return;
+            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+            if (string.IsNullOrEmpty(ipStr)) return;
+            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
+            if (pc == null) return;
+
+            Form dlg = new Form();
+            dlg.Text = "DNS Log \u2014 " + ipStr;
+            dlg.StartPosition = FormStartPosition.CenterParent;
+            dlg.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            dlg.Width  = 520;
+            dlg.Height = 420;
+            dlg.MinimumSize = new System.Drawing.Size(380, 260);
+            dlg.BackColor = UITheme.Surface0;
+
+            var lblTitle = new Label
+            {
+                Text      = isSpoofingActive
+                            ? "Live DNS queries from " + ipStr + " (waiting...)"
+                            : "\u26A0  Spoofing is not active \u2014 start spoofing to capture DNS",
+                ForeColor = isSpoofingActive ? UITheme.TextSecondary : System.Drawing.Color.Orange,
+                Font      = new System.Drawing.Font("Segoe UI", 9f),
+                Location  = new System.Drawing.Point(10, 8),
+                Size      = new System.Drawing.Size(490, 18),
+                Anchor    = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            var txtLog = new TextBox
+            {
+                Multiline   = true,
+                ReadOnly    = true,
+                ScrollBars  = ScrollBars.Vertical,
+                Location    = new System.Drawing.Point(10, 32),
+                Size        = new System.Drawing.Size(482, 340),
+                BackColor   = UITheme.Surface1,
+                ForeColor   = UITheme.TextPrimary,
+                BorderStyle = BorderStyle.None,
+                Font        = new System.Drawing.Font("Consolas", 9.5f),
+                Anchor      = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            dlg.Controls.Add(lblTitle);
+            dlg.Controls.Add(txtLog);
+            dlg.Show(this);
+
+            Action<PC, string> handler = (logPC, hostname) =>
+            {
+                if (logPC != pc) return;
+                string line = string.Format("[{0}]  {1}\r\n",
+                    DateTime.Now.ToString("HH:mm:ss"), hostname);
+                if (!dlg.IsDisposed)
+                {
+                    try
+                    {
+                        dlg.Invoke((Action)(() =>
+                        {
+                            if (!txtLog.IsDisposed)
+                            {
+                                txtLog.AppendText(line);
+                                if (isSpoofingActive)
+                                    lblTitle.Text = "Live DNS queries from " + ipStr;
+                            }
+                        }));
+                    }
+                    catch { }
+                }
+            };
+
+            this.cArp.OnDnsQuery += handler;
+            dlg.FormClosed += (s2, e2) =>
+            {
+                if (this.cArp != null)
+                    this.cArp.OnDnsQuery -= handler;
+            };
+        }
+
+        private void httpLogItem_Click(object sender, EventArgs e)
+        {
+            if (_contextMenuRowIndex < 2 || this.pcs == null || this.cArp == null) return;
+            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
+            if (string.IsNullOrEmpty(ipStr)) return;
+            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
+            if (pc == null) return;
+
+            Form dlg = new Form();
+            dlg.Text = "HTTP Log \u2014 " + ipStr;
+            dlg.StartPosition = FormStartPosition.CenterParent;
+            dlg.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            dlg.Width  = 520;
+            dlg.Height = 420;
+            dlg.MinimumSize = new System.Drawing.Size(380, 260);
+            dlg.BackColor = UITheme.Surface0;
+
+            var lblTitle = new Label
+            {
+                Text      = isSpoofingActive
+                            ? "Live HTTP hosts from " + ipStr + " (waiting...)"
+                            : "\u26A0  Spoofing is not active \u2014 start spoofing to capture HTTP",
+                ForeColor = isSpoofingActive ? UITheme.TextSecondary : System.Drawing.Color.Orange,
+                Font      = new System.Drawing.Font("Segoe UI", 9f),
+                Location  = new System.Drawing.Point(10, 8),
+                Size      = new System.Drawing.Size(490, 18),
+                Anchor    = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            var txtLog = new TextBox
+            {
+                Multiline   = true,
+                ReadOnly    = true,
+                ScrollBars  = ScrollBars.Vertical,
+                Location    = new System.Drawing.Point(10, 32),
+                Size        = new System.Drawing.Size(482, 340),
+                BackColor   = UITheme.Surface1,
+                ForeColor   = UITheme.TextPrimary,
+                BorderStyle = BorderStyle.None,
+                Font        = new System.Drawing.Font("Consolas", 9.5f),
+                Anchor      = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            dlg.Controls.Add(lblTitle);
+            dlg.Controls.Add(txtLog);
+            dlg.Show(this);
+
+            Action<PC, string> handler = (logPC, host) =>
+            {
+                if (logPC != pc) return;
+                string line = string.Format("[{0}]  {1}\r\n",
+                    DateTime.Now.ToString("HH:mm:ss"), host);
+                if (!dlg.IsDisposed)
+                {
+                    try
+                    {
+                        dlg.Invoke((Action)(() =>
+                        {
+                            if (!txtLog.IsDisposed)
+                            {
+                                txtLog.AppendText(line);
+                                if (isSpoofingActive)
+                                    lblTitle.Text = "Live HTTP hosts from " + ipStr;
+                            }
+                        }));
+                    }
+                    catch { }
+                }
+            };
+
+            this.cArp.OnHttpHost += handler;
+            dlg.FormClosed += (s2, e2) =>
+            {
+                if (this.cArp != null)
+                    this.cArp.OnHttpHost -= handler;
+            };
         }
 
         private void TreeGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
