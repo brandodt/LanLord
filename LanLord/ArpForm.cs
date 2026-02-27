@@ -324,7 +324,7 @@ namespace LanLord
                 string vendor = OuiLookup.Lookup(macStr);
                 string macDisplay = vendor.Length > 0 ? macStr + "  \u2022  " + vendor : macStr;
                 if (pc.osGuess != null) macDisplay += "  \u2022  " + pc.osGuess;
-                TreeGridNode treeGridNode = this.treeGridView1.Nodes[0].Nodes.Add((object)(pc.name ?? string.Empty), (object)pc.ip, (object)macDisplay, (object)string.Empty, (object)string.Empty, (object)(pc.capDown / 1024), (object)(pc.capUp / 1024), (object)pc.isBlocked, (object)false);
+                TreeGridNode treeGridNode = this.treeGridView1.Nodes[0].Nodes.Add((object)(pc.name ?? string.Empty), (object)pc.ip, (object)macDisplay, (object)string.Empty, (object)string.Empty, (object)(pc.capDown / 1024), (object)(pc.capUp / 1024), (object)pc.isBlocked, (object)true);
                 treeGridNode.ImageIndex = 0;
                 treeGridNode.Cells[5].ReadOnly = false;
                 treeGridNode.Cells[6].ReadOnly = false;
@@ -487,19 +487,10 @@ namespace LanLord
                 if (e.ColumnIndex != 8 || e.RowIndex < 2 || this.treeGridView1.Rows[e.RowIndex].Cells[0].Value.ToString().CompareTo(string.Empty) == 0)
                     return;
                 IPAddress ipAddress1 = tools.getIpAddress(this.treeGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
-                bool spoofEnabled = this.treeGridView1.Rows[e.RowIndex].Cells[8].Value.ToString().CompareTo("True") == 0;
-                PC pcFromIp1 = this.pcs.getPCFromIP(ipAddress1.GetAddressBytes());
-                if (pcFromIp1 != null)
-                {
-                    Monitor.Enter((object)pcFromIp1);
-                    pcFromIp1.redirect = spoofEnabled && !pcFromIp1.isBlocked;
-                    Monitor.Exit((object)pcFromIp1);
-                }
-                if (!spoofEnabled)
-                {
-                    for (int index = 0; index < 35; ++index)
-                        this.cArp.UnSpoof(ipAddress1, new IPAddress(this.cArp.routerIP));
-                }
+                if (this.treeGridView1.Rows[e.RowIndex].Cells[8].Value.ToString().CompareTo("False") != 0)
+                    return;
+                for (int index = 0; index < 35; ++index)
+                    this.cArp.UnSpoof(ipAddress1, new IPAddress(this.cArp.routerIP));
 
             }
             catch (Exception ex)
@@ -711,7 +702,7 @@ namespace LanLord
                 if (isSpoofed || isBlocked)
                 {
                     PC pcFromIp = this.pcs.getPCFromIP(tools.getIpAddress(this.treeGridView1.Nodes[0].Nodes[index].Cells[1].Value.ToString()).GetAddressBytes());
-                    if (!pcFromIp.isLocalPc && !pcFromIp.isGateway)
+                    if (!pcFromIp.isLocalPc)
                         this.cArp.Spoof(pcFromIp.ip, new IPAddress(this.cArp.routerIP));
                 }
                 ++index;
@@ -943,30 +934,19 @@ namespace LanLord
             rowContextMenu.Font      = new System.Drawing.Font("Segoe UI", 9.5F);
             rowContextMenu.Renderer  = new DarkMenuRenderer();
 
-            var renameItem   = new ToolStripMenuItem("\u270E  Rename");
-            var cutOffItem   = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
-            var unblockItem  = new ToolStripMenuItem("\u21A9  Remove Caps & Effects");
-            var graphItem    = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
-            var lossItem     = new ToolStripMenuItem("\uD83C\uDFB2  Set Packet Loss %");
-            var dnsSpoofItem = new ToolStripMenuItem("\uD83D\uDD00  DNS Spoof \u2192 IP");
-            var clearDnsItem = new ToolStripMenuItem("\u274C  Clear DNS Spoof");
+            var renameItem  = new ToolStripMenuItem("\u270E  Rename");
+            var cutOffItem  = new ToolStripMenuItem("\u2298  Cut Off  (1 KB/s cap)");
+            var unblockItem = new ToolStripMenuItem("\u21A9  Remove Caps");
+            var graphItem   = new ToolStripMenuItem("\u25A4  Bandwidth Graph");
 
-            renameItem.Click   += renameItem_Click;
-            cutOffItem.Click   += cutOffItem_Click;
-            unblockItem.Click  += unblockItem_Click;
-            graphItem.Click    += graphItem_Click;
-            lossItem.Click     += lossItem_Click;
-            dnsSpoofItem.Click += dnsSpoofItem_Click;
-            clearDnsItem.Click += clearDnsItem_Click;
+            renameItem.Click  += renameItem_Click;
+            cutOffItem.Click  += cutOffItem_Click;
+            unblockItem.Click += unblockItem_Click;
+            graphItem.Click   += graphItem_Click;
 
             rowContextMenu.Items.Add(renameItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(cutOffItem);
-            rowContextMenu.Items.Add(lossItem);
-            rowContextMenu.Items.Add(new ToolStripSeparator());
-            rowContextMenu.Items.Add(dnsSpoofItem);
-            rowContextMenu.Items.Add(clearDnsItem);
-            rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(unblockItem);
             rowContextMenu.Items.Add(new ToolStripSeparator());
             rowContextMenu.Items.Add(graphItem);
@@ -1106,139 +1086,11 @@ namespace LanLord
             if (pc == null) return;
             Monitor.Enter((object)pc);
             pc.capDown = 0;
-            pc.capUp   = 0;
-            pc.packetLossPct = 0;
-            pc.dnsSpoofIP    = null;
+            pc.capUp = 0;
             Monitor.Exit((object)pc);
             this.treeGridView1.CancelEdit();
             this.treeGridView1.Rows[_contextMenuRowIndex].Cells[5].Value = 0;
             this.treeGridView1.Rows[_contextMenuRowIndex].Cells[6].Value = 0;
-            // Clear any indicator tags from name cell
-            string name = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
-            name = name.Replace("[LOSS] ", "").Replace("[DNS] ", "");
-            this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value = name;
-        }
-
-        private void lossItem_Click(object sender, EventArgs e)
-        {
-            if (!isSpoofingActive)
-            {
-                this.lblStatus.Text = "  \u26A0 Start Spoofing first to use Packet Loss injection";
-                return;
-            }
-            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
-            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
-            if (string.IsNullOrEmpty(ipStr)) return;
-            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
-            if (pc == null) return;
-
-            string input;
-            using (Form dlg = new Form())
-            {
-                dlg.Text = "Set Packet Loss %";
-                dlg.StartPosition = FormStartPosition.CenterParent;
-                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dlg.MaximizeBox = false; dlg.MinimizeBox = false;
-                dlg.Width = 360; dlg.Height = 150;
-                dlg.BackColor = UITheme.Surface0;
-                var lbl2 = new Label { Text = "Loss % for " + ipStr + " (0 = off, 1\u2013100):", ForeColor = UITheme.TextSecondary, Font = new System.Drawing.Font("Segoe UI", 9f), Location = new System.Drawing.Point(12, 14), Size = new System.Drawing.Size(320, 20) };
-                var txt2 = new TextBox { Text = pc.packetLossPct.ToString(), Location = new System.Drawing.Point(12, 38), Size = new System.Drawing.Size(320, 24), BackColor = UITheme.Surface1, ForeColor = UITheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = new System.Drawing.Font("Segoe UI", 10f) };
-                var ok2 = new Button { Text = "OK", DialogResult = DialogResult.OK, Width = 80, Height = 28, Location = new System.Drawing.Point(164, 74), BackColor = UITheme.Accent, ForeColor = System.Drawing.Color.White, FlatStyle = FlatStyle.Flat };
-                ok2.FlatAppearance.BorderSize = 0;
-                var cancel2 = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Width = 80, Height = 28, Location = new System.Drawing.Point(254, 74), BackColor = UITheme.Surface1, ForeColor = UITheme.TextPrimary, FlatStyle = FlatStyle.Flat };
-                cancel2.FlatAppearance.BorderSize = 0;
-                dlg.Controls.AddRange(new System.Windows.Forms.Control[] { lbl2, txt2, ok2, cancel2 });
-                dlg.AcceptButton = ok2; dlg.CancelButton = cancel2; txt2.SelectAll();
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                input = txt2.Text;
-            }
-            if (!int.TryParse(input.Trim(), out int pct) || pct < 0 || pct > 100)
-            {
-                this.lblStatus.Text = "  \u26A0 Invalid value \u2014 enter a number between 0 and 100";
-                return;
-            }
-
-            Monitor.Enter((object)pc);
-            pc.packetLossPct = pct;
-            Monitor.Exit((object)pc);
-
-            // Add/remove [LOSS] tag from name cell
-            string name = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
-            name = name.Replace("[LOSS] ", "");
-            if (pct > 0) name = "[LOSS] " + name;
-            this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value = name;
-            this.lblStatus.Text = pct == 0
-                ? "  Packet loss cleared for " + ipStr
-                : "  \uD83C\uDFB2 Injecting " + pct + "% packet loss on " + ipStr;
-        }
-
-        private void dnsSpoofItem_Click(object sender, EventArgs e)
-        {
-            if (!isSpoofingActive)
-            {
-                this.lblStatus.Text = "  \u26A0 Start Spoofing first to use DNS Spoof";
-                return;
-            }
-            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
-            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
-            if (string.IsNullOrEmpty(ipStr)) return;
-            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
-            if (pc == null) return;
-
-            string current = pc.dnsSpoofIP ?? "";
-            string input;
-            using (Form dlg = new Form())
-            {
-                dlg.Text = "DNS Spoof \u2014 Redirect IP";
-                dlg.StartPosition = FormStartPosition.CenterParent;
-                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dlg.MaximizeBox = false; dlg.MinimizeBox = false;
-                dlg.Width = 380; dlg.Height = 150;
-                dlg.BackColor = UITheme.Surface0;
-                var lbl3 = new Label { Text = "Redirect DNS queries from " + ipStr + " to:", ForeColor = UITheme.TextSecondary, Font = new System.Drawing.Font("Segoe UI", 9f), Location = new System.Drawing.Point(12, 14), Size = new System.Drawing.Size(340, 20) };
-                var txt3 = new TextBox { Text = current, Location = new System.Drawing.Point(12, 38), Size = new System.Drawing.Size(340, 24), BackColor = UITheme.Surface1, ForeColor = UITheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = new System.Drawing.Font("Segoe UI", 10f) };
-                var ok3 = new Button { Text = "OK", DialogResult = DialogResult.OK, Width = 80, Height = 28, Location = new System.Drawing.Point(184, 74), BackColor = UITheme.Accent, ForeColor = System.Drawing.Color.White, FlatStyle = FlatStyle.Flat };
-                ok3.FlatAppearance.BorderSize = 0;
-                var cancel3 = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Width = 80, Height = 28, Location = new System.Drawing.Point(274, 74), BackColor = UITheme.Surface1, ForeColor = UITheme.TextPrimary, FlatStyle = FlatStyle.Flat };
-                cancel3.FlatAppearance.BorderSize = 0;
-                dlg.Controls.AddRange(new System.Windows.Forms.Control[] { lbl3, txt3, ok3, cancel3 });
-                dlg.AcceptButton = ok3; dlg.CancelButton = cancel3; txt3.SelectAll();
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                input = txt3.Text.Trim();
-            }
-            if (string.IsNullOrWhiteSpace(input)) return;
-            if (!IPAddress.TryParse(input, out _))
-            {
-                this.lblStatus.Text = "  \u26A0 Invalid IP address";
-                return;
-            }
-
-            Monitor.Enter((object)pc);
-            pc.dnsSpoofIP = input;
-            Monitor.Exit((object)pc);
-
-            // Add [DNS] tag to name cell
-            string name = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
-            if (!name.Contains("[DNS] ")) name = "[DNS] " + name;
-            this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value = name;
-            this.lblStatus.Text = "  \uD83D\uDD00 DNS queries from " + ipStr + " redirected to " + input;
-        }
-
-        private void clearDnsItem_Click(object sender, EventArgs e)
-        {
-            if (_contextMenuRowIndex < 2 || this.pcs == null) return;
-            string ipStr = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[1].Value?.ToString();
-            if (string.IsNullOrEmpty(ipStr)) return;
-            PC pc = this.pcs.getPCFromIP(tools.getIpAddress(ipStr).GetAddressBytes());
-            if (pc == null) return;
-
-            Monitor.Enter((object)pc);
-            pc.dnsSpoofIP = null;
-            Monitor.Exit((object)pc);
-
-            string name = this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value?.ToString() ?? string.Empty;
-            this.treeGridView1.Rows[_contextMenuRowIndex].Cells[0].Value = name.Replace("[DNS] ", "");
-            this.lblStatus.Text = "  DNS spoof cleared for " + ipStr;
         }
 
         private void graphItem_Click(object sender, EventArgs e)

